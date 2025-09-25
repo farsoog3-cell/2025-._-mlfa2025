@@ -3,28 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ML FA2026 - التطريز الاحترافي</title>
+<title>ML FA2025 - التطريز الاحترافي</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-<header>ML FA2026 - التطريز الاحترافي</header>
+<header>
+    <div class="logo">ML FA2025</div>
+    <nav>
+        <a href="#upload">رفع صورة</a>
+        <a href="#preview">معاينة</a>
+        <a href="#about">من نحن</a>
+    </nav>
+</header>
+
 <main>
-<h2>المصمم والمطورين</h2>
-<div class="developer">فارس</div>
-<div class="developer">ملهم</div>
-<p>تم إصدار النسخة عام 2025</p>
+<section id="upload" class="section">
+    <h2>رفع صورة وتحويلها لقالب تطريز جاهز</h2>
+    <p>قم برفع أي صورة وسيتم تحويلها تلقائياً إلى قالب تطريز DST جاهز للعمل بضغطة زر.</p>
+    <div class="upload-container">
+        <input type="file" id="imageUpload" accept="image/*">
+        <button id="uploadBtn"><i class="fa-solid fa-upload"></i> رفع وتحويل</button>
+    </div>
+    <div id="progressContainer">
+        <div id="progressBar"></div>
+    </div>
+</section>
 
-<h2>رفع صورة وتحويلها لقالب تطريز حقيقي</h2>
-<input type="file" id="imageUpload" accept="image/*"><br>
-<button id="uploadBtn">رفع وتحويل</button>
+<section id="preview" class="section">
+    <h2>سجل المعالجة والمعاينة</h2>
+    <div class="console">
+        <pre id="consoleLog">جاهز لاستقبال الصور...</pre>
+    </div>
+    <canvas id="canvas"></canvas>
+</section>
 
-<div id="progressContainer">
-  <div id="progressBar"></div>
-</div>
-
-<h3>معاينة القالب:</h3>
-<canvas id="canvas"></canvas>
+<section id="about" class="section">
+    <h2>من نحن</h2>
+    <p>نحن مطورين أداة تحويل أي صورة إلى قالب تطريز جاهز للعمل بدون عمل الساعات، فقط بضغطة زر.</p>
+    <p>تم تطوير وبرمجة هذا الموقع من قبل المبرمج <strong>ملهم</strong> والمطور <strong>فارس</strong>.</p>
+    <p>شكراً لكم لاستخدامكم ML FA2025.</p>
+</section>
 </main>
+
+<footer>
+    &copy; 2025 ML FA2025 - كل الحقوق محفوظة
+</footer>
+
 <script src="script.js"></script>
 </body>
 </html>
