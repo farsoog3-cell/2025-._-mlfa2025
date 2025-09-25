@@ -6,16 +6,14 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     const fileInput = document.getElementById('imageUpload');
     if(fileInput.files.length === 0) { alert("اختر صورة أولاً"); return; }
     const file = fileInput.files[0];
-    const format = document.getElementById('formatSelect').value;
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('format', format);
 
     progressBar.style.width = '0%';
 
-    // ضع هنا رابط السيرفر النهائي بعد رفعه على Render
-    const response = await fetch('https://YOUR_SERVER_URL/upload', {
+    // ضع هنا رابط السيرفر النهائي من Render
+    const response = await fetch('https://2025mlfa-6.onrender.com/upload', {
         method: 'POST',
         body: formData
     });
@@ -25,13 +23,13 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 
-    // تحميل الملف النهائي
+    // تنزيل الملف النهائي
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pattern.${format.toLowerCase()}`;
+    a.download = `pattern.dst`;
     a.click();
 
-    // عرض المعاينة على Canvas (صورة أصلية)
+    // عرض المعاينة على Canvas
     const img = new Image();
     img.onload = () => {
         canvas.width = img.width;
