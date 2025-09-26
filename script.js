@@ -42,13 +42,29 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
 
         consoleLog.textContent += `\nتم تنزيل ملف DST.`;
 
-        // عرض المعاينة على Canvas
+        // عرض معاينة "صورة مطرزة"
         const img = new Image();
         img.onload = () => {
             canvas.width = img.width;
             canvas.height = img.height;
+            // إضافة تأثير نقاط التطريز
+            ctx.clearRect(0,0,canvas.width,canvas.height);
             ctx.drawImage(img,0,0);
-            consoleLog.textContent += `\nتم عرض المعاينة.`;
+            let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            for(let i=0;i<imageData.data.length;i+=4){
+                let gray = (imageData.data[i]+imageData.data[i+1]+imageData.data[i+2])/3;
+                if(gray<200){
+                    imageData.data[i] = 255;
+                    imageData.data[i+1] = 255;
+                    imageData.data[i+2] = 255;
+                } else {
+                    imageData.data[i] = 150;
+                    imageData.data[i+1] = 0;
+                    imageData.data[i+2] = 150;
+                }
+            }
+            ctx.putImageData(imageData,0,0);
+            consoleLog.textContent += `\nتم عرض المعاينة كصورة مطرزة.`;
         };
         img.src = URL.createObjectURL(file);
 
