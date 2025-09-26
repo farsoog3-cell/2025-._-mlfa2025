@@ -13,12 +13,19 @@ header {
     padding:15px 30px;
     background:#1a1a1a;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    flex-wrap: wrap;
 }
 
 header .logo {
     font-size:28px;
     font-weight:bold;
     color:#00cfff;
+    margin-bottom:10px;
+}
+
+header nav {
+    display:flex;
+    flex-wrap: wrap;
 }
 
 header nav a {
@@ -27,6 +34,7 @@ header nav a {
     text-decoration:none;
     font-weight:500;
     transition: color 0.3s;
+    margin-bottom:10px;
 }
 
 header nav a:hover {
@@ -52,6 +60,7 @@ h2 {
     gap:15px;
     align-items:center;
     margin-bottom:15px;
+    flex-wrap: wrap;
 }
 
 input[type="file"] {
@@ -91,6 +100,7 @@ button:hover {
     width:0%;
     height:100%;
     background:#00cfff;
+    transition: width 0.3s;
 }
 
 .console {
