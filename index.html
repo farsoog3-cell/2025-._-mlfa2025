@@ -19,10 +19,14 @@
 
 <main>
 <section id="upload" class="section">
-    <h2>رفع صورة وتحويلها لقالب مطرز جاهز</h2>
-    <p>قم برفع أي صورة وسيتم تحويلها تلقائياً إلى قالب تطريز DST/DSE جاهز للاستخدام في الماكينة.</p>
+    <h2>رفع صورة وتحويلها لقالب مطرز</h2>
+    <p>اختر صورة وسيتم تحويلها تلقائياً إلى قالب تطريز DST/DSE جاهز للماكينة.</p>
     <div class="upload-container">
         <input type="file" id="imageUpload" accept="image/*">
+        <select id="formatSelect">
+            <option value="DST">DST</option>
+            <option value="DSE">DSE</option>
+        </select>
         <button id="uploadBtn"><i class="fa-solid fa-upload"></i> رفع وتحويل</button>
     </div>
     <div id="progressContainer">
