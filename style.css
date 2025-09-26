@@ -63,7 +63,7 @@ h2 {
     flex-wrap: wrap;
 }
 
-input[type="file"] {
+input[type="file"], select {
     padding:10px;
     border-radius:6px;
     border:none;
