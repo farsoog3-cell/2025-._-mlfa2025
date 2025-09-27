@@ -1,5 +1,6 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const consoleLog = document.getElementById('consoleLog');
 
 let stitchPoints = [];
 let fileBase64 = "";
@@ -8,11 +9,18 @@ let imgPreview = null;
 
 const SERVER_URL = "https://2025mlfa-1.onrender.com";
 
-// رفع الصورة فقط
-document.getElementById('uploadBtn').addEventListener('click', async () => {
+function log(msg){
+    consoleLog.textContent += `\n${msg}`;
+    consoleLog.scrollTop = consoleLog.scrollHeight;
+}
+
+// بدء التحويل
+document.getElementById('startBtn').addEventListener('click', async ()=>{
     const fileInput = document.getElementById('imageUpload');
-    if(fileInput.files.length===0){alert("اختر صورة أولاً"); return;}
+    const formatSelect = document.getElementById('formatSelect');
+    if(fileInput.files.length===0){alert("اختر صورة"); return;}
     const file = fileInput.files[0];
+    const format = formatSelect.value;
 
     imgPreview = new Image();
     imgPreview.src = URL.createObjectURL(file);
@@ -21,16 +29,8 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
         canvas.height=imgPreview.height;
         ctx.drawImage(imgPreview,0,0);
     };
-});
 
-// بدء التحويل
-document.getElementById('startBtn').addEventListener('click', async ()=>{
-    const fileInput = document.getElementById('imageUpload');
-    const formatSelect = document.getElementById('formatSelect');
-    if(fileInput.files.length===0){alert("اختر صورة أولاً"); return;}
-    const file = fileInput.files[0];
-    const format = formatSelect.value;
-
+    log("بدأ التحويل...");
     const formData = new FormData();
     formData.append('file', file);
     formData.append('format', format);
@@ -38,31 +38,36 @@ document.getElementById('startBtn').addEventListener('click', async ()=>{
     try{
         const response = await fetch(`${SERVER_URL}/upload`, {method:'POST', body:formData});
         const data = await response.json();
-        if(response.status!==200){alert("خطأ: "+(data.error||"فشل التحويل")); return;}
+        if(response.status!==200){alert("خطأ:"+data.error); log("فشل التحويل"); return;}
 
         stitchPoints = data.stitch_points;
         fileBase64 = data.file_base64;
         filename = data.filename;
 
-        if(imgPreview){
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            imgPreview.src = "data:image/png;base64," + data.preview_image;
-            imgPreview.onload = ()=>ctx.drawImage(imgPreview,0,0);
-        }
-
-        alert("تم تحويل الصورة إلى قالب تطريز بنجاح!");
-    }catch(err){alert("خطأ في الاتصال بالسيرفر");}
+        log("تم إنشاء القالب بنجاح!");
+        animateStitches(0);
+    }catch(err){alert("خطأ في الاتصال بالسيرفر"); log("خطأ الاتصال بالسيرفر");}
 });
 
 // تنزيل الملف
 document.getElementById('downloadBtn').addEventListener('click', ()=>{
-    if(!fileBase64){alert("لا يوجد ملف للتنزيل. قم بالتحويل أولاً."); return;}
+    if(!fileBase64){alert("لا يوجد ملف لتحميل"); return;}
     const blob = b64toBlob(fileBase64,'application/octet-stream');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = filename;
     a.click();
+    log("تم تنزيل الملف: "+filename);
 });
+
+// رسم مسار الإبرة والخيط على القالب
+function animateStitches(index){
+    if(index>=stitchPoints.length) { log("انتهى مسار الإبرة"); return; }
+    const p = stitchPoints[index];
+    ctx.fillStyle='red';
+    ctx.fillRect(p.x,p.y,2,2);
+    setTimeout(()=>animateStitches(index+1),5);
+}
 
 // تحويل Base64 إلى Blob
 function b64toBlob(b64Data, contentType='', sliceSize=512){
