@@ -21,7 +21,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     consoleLog.textContent += `\nبدأ رفع الملف إلى السيرفر...`;
 
     try {
-        const response = await fetch('https://2025mlfa-6.onrender.com/upload', {
+        const response = await fetch('http://localhost:5000/upload', { // استخدم رابط السيرفر المحلي
             method: 'POST',
             body: formData
         });
@@ -45,30 +45,13 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
 
         consoleLog.textContent += `\nتم تنزيل الملف بنجاح.`;
 
-        // عرض معاينة على Canvas
+        // عرض المعاينة على Canvas (ملون)
         const img = new Image();
         img.onload = () => {
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.clearRect(0,0,canvas.width,canvas.height);
             ctx.drawImage(img,0,0);
-
-            // إضافة تأثير نقاط خيوط Satin
-            let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-            for(let i=0;i<imageData.data.length;i+=4){
-                let gray = (imageData.data[i]+imageData.data[i+1]+imageData.data[i+2])/3;
-                if(gray<200){
-                    imageData.data[i] = 255;
-                    imageData.data[i+1] = 255;
-                    imageData.data[i+2] = 255;
-                } else {
-                    imageData.data[i] = 180;
-                    imageData.data[i+1] = 50;
-                    imageData.data[i+2] = 150;
-                }
-            }
-            ctx.putImageData(imageData,0,0);
-            consoleLog.textContent += `\nتم عرض المعاينة كصورة مطرزة.`;
         };
         img.src = URL.createObjectURL(file);
 
