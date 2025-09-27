@@ -1,43 +1,41 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>mlfa2025.09</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mlfa2025.09</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <header>
+<header>
     <h1>mlfa2025.09</h1>
     <p>🚀 تم التطوير بواسطة فارس وملهم</p>
-  </header>
+</header>
 
-  <main>
-    <section class="embroidery">
-      <h2>🧵 تحويل الصورة إلى قالب تطريز</h2>
-      <form id="embForm" enctype="multipart/form-data">
+<main>
+<section class="embroidery">
+    <h2>🧵 تحويل الصورة إلى قالب تطريز</h2>
+    <form id="embForm" enctype="multipart/form-data">
         <input type="file" name="file" id="embFile" accept="image/*" required>
-
         <label for="embFormat">صيغة الملف:</label>
         <select name="format" id="embFormat">
-          <option value="dst">DST</option>
-          <option value="dse">DSE (EXP)</option>
+            <option value="dst">DST</option>
+            <option value="dse">DSE (EXP)</option>
         </select>
-
         <label for="embType">نوع التطريز:</label>
         <select name="embType" id="embType">
-          <option value="outline">حدود (Outline)</option>
-          <option value="fill">تعبئة (Fill)</option>
-          <option value="both">حدود + تعبئة (Outline + Fill)</option>
+            <option value="outline">حدود (Outline)</option>
+            <option value="fill">تعبئة (Fill)</option>
+            <option value="both">حدود + تعبئة (Outline + Fill)</option>
         </select>
-
         <button type="submit" class="btn">تحويل</button>
-      </form>
+    </form>
 
-      <div id="embPreview"></div>
-      <a id="downloadEmb" style="display:none" class="btn">⬇️ تنزيل القالب</a>
-    </section>
-  </main>
+    <div id="embPreview"></div>
+    <a id="downloadEmb" style="display:none" class="btn">⬇️ تنزيل القالب</a>
+</section>
+</main>
 
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
