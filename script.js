@@ -17,8 +17,12 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     progressBar.style.width = '0%';
 
     try {
-        const response = await fetch('https://2025mlfa-1.onrender.com', { method: 'POST', body: formData });
-        if(!response.ok) { alert("خطأ أثناء رفع الصورة"); return; }
+        const response = await fetch('https://2025mlfa-1.onrender.com/upload', { method: 'POST', body: formData });
+        if(!response.ok) { 
+            const err = await response.json();
+            alert("خطأ: " + (err.error || "فشل التحويل"));
+            return;
+        }
 
         const data = await response.json();
         stitchPoints = data.stitch_points;
@@ -44,7 +48,6 @@ document.getElementById('startBtn').addEventListener('click', () => {
 
 function animateStitches(index) {
     if(index >= stitchPoints.length) {
-        // انتهت الحركة، تنزيل ملف DST
         const blob = b64toBlob(dstBase64, 'application/octet-stream');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -53,7 +56,6 @@ function animateStitches(index) {
         return;
     }
 
-    // رسم النقطة الحالية
     ctx.drawImage(imgPreview,0,0);
     ctx.fillStyle = "red";
     const pt = stitchPoints[index];
@@ -61,10 +63,9 @@ function animateStitches(index) {
     ctx.arc(pt.x, pt.y, 2, 0, Math.PI*2);
     ctx.fill();
 
-    setTimeout(()=>animateStitches(index+1), 20); // تأخير بين الغرز (20ms)
+    setTimeout(()=>animateStitches(index+1), 20);
 }
 
-// تحويل Base64 إلى Blob
 function b64toBlob(b64Data, contentType='', sliceSize=512){
     const byteCharacters = atob(b64Data);
     const byteArrays = [];
