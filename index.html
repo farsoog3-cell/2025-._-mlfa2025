@@ -3,39 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mlfa2025.09</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<title>MLFA - Embroidery</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-    <h1>mlfa2025.09</h1>
-    <p>🚀 تم التطوير بواسطة فارس وملهم</p>
-</header>
+<h1>MLFA - رفع صورة → استخراج مسار التطريز</h1>
+<form id="form">
+  <input type="file" name="image" accept="image/*" required />
+  <button type="submit">رفع ومعالجة</button>
+</form>
 
-<main>
-<section class="embroidery">
-    <h2>🧵 تحويل الصورة إلى قالب تطريز</h2>
-    <form id="embForm" enctype="multipart/form-data">
-        <input type="file" name="file" id="embFile" accept="image/*" required>
-        <label for="embFormat">صيغة الملف:</label>
-        <select name="format" id="embFormat">
-            <option value="dst">DST</option>
-            <option value="dse">DSE (EXP)</option>
-        </select>
-        <label for="embType">نوع التطريز:</label>
-        <select name="embType" id="embType">
-            <option value="outline">حدود (Outline)</option>
-            <option value="fill">تعبئة (Fill)</option>
-            <option value="both">حدود + تعبئة (Outline + Fill)</option>
-        </select>
-        <button type="submit" class="btn">تحويل</button>
-    </form>
-
-    <div id="embPreview"></div>
-    <a id="downloadEmb" style="display:none" class="btn">⬇️ تنزيل القالب</a>
-</section>
-</main>
-
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<img id="imgPreview" class="preview" style="display:none;" />
+<canvas id="previewCanvas" width="300" height="300"></canvas>
+<div id="result"></div>
+<div id="log"></div>
+<footer>برمجة: فارس وملهم | MLFA</footer>
+<script src="script.js"></script>
 </body>
 </html>
