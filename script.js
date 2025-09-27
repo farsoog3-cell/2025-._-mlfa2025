@@ -6,6 +6,8 @@ let stitchPoints = [];
 let dstBase64 = "";
 let imgPreview = null;
 
+const SERVER_URL = "https://2025mlfa-1.onrender.com";
+
 document.getElementById('uploadBtn').addEventListener('click', async () => {
     const fileInput = document.getElementById('imageUpload');
     if(fileInput.files.length === 0) { alert("اختر صورة أولاً"); return; }
@@ -17,7 +19,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     progressBar.style.width = '0%';
 
     try {
-        const response = await fetch('https://2025mlfa-1.onrender.com', { method: 'POST', body: formData });
+        const response = await fetch(`${SERVER_URL}/upload`, { method: 'POST', body: formData });
         const data = await response.json();
 
         if(response.status !== 200) {
@@ -42,39 +44,4 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('startBtn').addEventListener('click', () => {
-    if(stitchPoints.length === 0) { alert("لا توجد نقاط تطريز"); return; }
-    animateStitches(0);
-});
-
-function animateStitches(index) {
-    if(index >= stitchPoints.length) {
-        const blob = b64toBlob(dstBase64, 'application/octet-stream');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = "pattern.dst";
-        a.click();
-        return;
-    }
-
-    ctx.drawImage(imgPreview,0,0);
-    ctx.fillStyle = "red";
-    const pt = stitchPoints[index];
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, 2, 0, Math.PI*2);
-    ctx.fill();
-
-    setTimeout(()=>animateStitches(index+1), 20);
-}
-
-function b64toBlob(b64Data, contentType='', sliceSize=512){
-    const byteCharacters = atob(b64Data);
-    const byteArrays = [];
-    for(let offset=0; offset < byteCharacters.length; offset += sliceSize){
-        const slice = byteCharacters.slice(offset, offset + sliceSize);
-        const byteNumbers = new Array(slice.length);
-        for(let i=0;i<slice.length;i++){ byteNumbers[i] = slice.charCodeAt(i); }
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
-    }
-    return new Blob(byteArrays, {type: contentType});
-}
+    if(stitchPoints.length
