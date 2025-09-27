@@ -20,14 +20,14 @@
 <main>
 <section id="upload" class="section">
     <h2>رفع صورة وتحويلها لقالب مطرز</h2>
-    <p>اختر صورة وسيتم تحويلها تلقائياً إلى قالب تطريز DST/DSE جاهز للماكينة.</p>
+    <p>اختر صورة وسيتم محاكاة مسار الإبرة على المخطط.</p>
     <div class="upload-container">
         <input type="file" id="imageUpload" accept="image/*">
         <select id="formatSelect">
             <option value="DST">DST</option>
-            <option value="DSE">DSE</option>
         </select>
-        <button id="uploadBtn"><i class="fa-solid fa-upload"></i> رفع وتحويل</button>
+        <button id="uploadBtn"><i class="fa-solid fa-upload"></i> رفع الصورة</button>
+        <button id="startBtn"><i class="fa-solid fa-play"></i> ابدأ التطريز</button>
     </div>
     <div id="progressContainer">
         <div id="progressBar"></div>
@@ -35,18 +35,14 @@
 </section>
 
 <section id="preview" class="section">
-    <h2>معاينة القالب المطّرز</h2>
-    <div class="console">
-        <pre id="consoleLog">جاهز لاستقبال الصور...</pre>
-    </div>
+    <h2>معاينة مسار الإبرة</h2>
     <canvas id="canvas"></canvas>
 </section>
 
 <section id="about" class="section">
     <h2>من نحن</h2>
-    <p>نحن مطورين أداة تحويل أي صورة إلى قالب تطريز جاهز للعمل بدون عمل الساعات، فقط بضغطة زر.</p>
+    <p>أداة تحويل أي صورة إلى مخطط تطريز مع محاكاة مسار الإبرة.</p>
     <p>تم تطوير وبرمجة هذا الموقع من قبل المبرمج <strong>ملهم</strong> والمطور <strong>فارس</strong>.</p>
-    <p>شكراً لكم لاستخدامكم ML FA2025.</p>
 </section>
 </main>
 
