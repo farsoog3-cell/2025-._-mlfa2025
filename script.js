@@ -21,7 +21,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     consoleLog.textContent += `\nبدأ رفع الملف إلى السيرفر...`;
 
     try {
-        const response = await fetch('http://localhost:5000/upload', { // رابط السيرفر المحلي
+        const response = await fetch('https://2025mlfa-1.onrender.com', { // رابط السيرفر المحلي
             method: 'POST',
             body: formData
         });
