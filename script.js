@@ -1,65 +1,68 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const progressBar = document.getElementById('progressBar');
-const consoleLog = document.getElementById('consoleLog');
+
+let stitchPoints = [];
+let dstBase64 = "";
+let imgPreview = null;
 
 document.getElementById('uploadBtn').addEventListener('click', async () => {
     const fileInput = document.getElementById('imageUpload');
-    const formatSelect = document.getElementById('formatSelect');
-
     if(fileInput.files.length === 0) { alert("اختر صورة أولاً"); return; }
     const file = fileInput.files[0];
-    const format = formatSelect.value;
-
-    consoleLog.textContent += `\nتم اختيار الملف: ${file.name} بصيغة ${format}`;
-    progressBar.style.width = '0%';
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('format', format);
 
-    consoleLog.textContent += `\nبدأ رفع الملف إلى السيرفر...`;
+    progressBar.style.width = '0%';
 
     try {
-        const response = await fetch('https://2025mlfa-1.onrender.com', { // رابط السيرفر المحلي
-            method: 'POST',
-            body: formData
-        });
-
-        if(!response.ok) {
-            consoleLog.textContent += `\nحدث خطأ أثناء التحويل.`;
-            alert("حدث خطأ أثناء التحويل");
-            return;
-        }
+        const response = await fetch('http://localhost:5000/upload', { method: 'POST', body: formData });
+        if(!response.ok) { alert("خطأ أثناء رفع الصورة"); return; }
 
         const data = await response.json();
-        consoleLog.textContent += `\nتم معالجة الصورة وتحويلها بنجاح.`;
+        stitchPoints = data.stitch_points;
+        dstBase64 = data.dst_file;
 
-        // تنزيل ملف DST مباشرة
-        const dstBlob = b64toBlob(data.dst_file, 'application/octet-stream');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(dstBlob);
-        a.download = data.filename;
-        a.click();
-        consoleLog.textContent += `\nتم تنزيل الملف بنجاح.`;
-
-        // عرض المعاينة على Canvas
-        const img = new Image();
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.drawImage(img,0,0);
+        imgPreview = new Image();
+        imgPreview.src = "data:image/png;base64," + data.preview_image;
+        imgPreview.onload = () => {
+            canvas.width = imgPreview.width;
+            canvas.height = imgPreview.height;
+            ctx.drawImage(imgPreview,0,0);
         };
-        img.src = "data:image/png;base64," + data.preview_image;
 
         progressBar.style.width = '100%';
-
-    } catch(err) {
-        consoleLog.textContent += `\nخطأ في الاتصال بالسيرفر: ${err}`;
-        alert("خطأ في الاتصال بالسيرفر");
-    }
+        alert("تم رفع الصورة بنجاح! اضغط على ابدأ لرؤية محاكاة الإبرة.");
+    } catch(err) { alert("خطأ في الاتصال بالسيرفر"); }
 });
+
+document.getElementById('startBtn').addEventListener('click', () => {
+    if(stitchPoints.length === 0) { alert("لا توجد نقاط تطريز"); return; }
+    animateStitches(0);
+});
+
+function animateStitches(index) {
+    if(index >= stitchPoints.length) {
+        // انتهت الحركة، تنزيل ملف DST
+        const blob = b64toBlob(dstBase64, 'application/octet-stream');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "pattern.dst";
+        a.click();
+        return;
+    }
+
+    // رسم النقطة الحالية
+    ctx.drawImage(imgPreview,0,0);
+    ctx.fillStyle = "red";
+    const pt = stitchPoints[index];
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 2, 0, Math.PI*2);
+    ctx.fill();
+
+    setTimeout(()=>animateStitches(index+1), 20); // تأخير بين الغرز (20ms)
+}
 
 // تحويل Base64 إلى Blob
 function b64toBlob(b64Data, contentType='', sliceSize=512){
