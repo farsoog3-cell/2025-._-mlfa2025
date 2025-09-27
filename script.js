@@ -18,7 +18,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
 
     try {
         // رابط السيرفر Render endpoint
-        const response = await fetch('https://2025mlfa-6.onrender.com/upload', {
+        const response = await fetch('https://2025mlfa-2-7e2x.onrender.com', {
             method: 'POST',
             body: formData
         });
