@@ -3,62 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ML FA2025 - التطريز التفاعلي</title>
+<title>ML FA2025 - المعاينة التفاعلية</title>
 <style>
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f2f2f2; color:#fff; }
-header { display:flex; justify-content: space-between; align-items:center; padding:15px 30px; background:#1a1a1a; box-shadow: 0 4px 6px rgba(0,0,0,0.3); flex-wrap: wrap; }
-header .logo { font-size:28px; font-weight:bold; color:#00cfff; margin-bottom:10px; }
-header nav { display:flex; flex-wrap: wrap; }
-header nav a { margin-left:20px; color:#fff; text-decoration:none; font-weight:500; transition: color 0.3s; margin-bottom:10px; }
+body { font-family: 'Segoe UI', sans-serif; margin:0; padding:0; background:#f2f2f2; color:#fff; }
+header { display:flex; justify-content: space-between; align-items:center; padding:15px 30px; background:#1a1a1a; }
+header .logo { font-size:28px; font-weight:bold; color:#00cfff; }
+header nav a { margin-left:20px; color:#fff; text-decoration:none; }
 header nav a:hover { color:#00cfff; }
-.section { max-width:1000px; margin:40px auto; padding:20px; background:#222; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.3); }
-h2 { color:#00cfff; margin-bottom:15px; }
-.upload-container { display:flex; gap:15px; align-items:center; margin-bottom:15px; flex-wrap: wrap; }
-input[type="file"] { padding:10px; border-radius:6px; border:none; }
-button { background:#00cfff; color:#000; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:10px; transition: background 0.3s; }
-button:hover { background:#00a3cc; }
-#progressContainer { width:100%; height:20px; background:#444; border-radius:10px; overflow:hidden; margin-top:10px; }
+.section { max-width:1000px; margin:40px auto; padding:20px; background:#222; border-radius:12px; }
+button { background:#00cfff; color:#000; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; }
+#progressContainer { width:100%; height:20px; background:#444; border-radius:10px; margin-top:10px; }
 #progressBar { width:0%; height:100%; background:#00cfff; transition: width 0.3s; }
-.console { background:#000; padding:15px; border-radius:8px; max-height:200px; overflow-y:auto; font-family: monospace; font-size:14px; margin-bottom:15px; }
-canvas { display:block; margin:20px auto; border:1px solid #444; border-radius:8px; max-width:100%; background:#fff; }
-footer { background:#1a1a1a; text-align:center; padding:15px; margin-top:40px; font-size:14px; color:#aaa; }
+.console { background:#000; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; font-family: monospace; }
+canvas { display:block; margin:20px auto; border:1px solid #444; border-radius:8px; background:#fff; }
 </style>
 </head>
 <body>
 <header>
     <div class="logo">ML FA2025</div>
     <nav>
-        <a href="#upload">رفع صورة</a>
+        <a href="#upload">رفع ملف</a>
         <a href="#preview">معاينة</a>
-        <a href="#about">من نحن</a>
     </nav>
 </header>
 
 <main>
 <section id="upload" class="section">
-    <h2>رفع صورة وتحويلها لقالب مطرز</h2>
-    <p>اختر أي صورة وسيتم تحويلها تلقائياً إلى قالب مطرز DST تفاعلي.</p>
-    <div class="upload-container">
-        <input type="file" id="imageUpload" accept="image/*">
-        <button id="uploadBtn">رفع وتحويل</button>
-    </div>
+    <h2>رفع صورة أو DST</h2>
+    <input type="file" id="imageUpload" accept="image/*,.dst">
+    <button id="uploadBtn">رفع وتحويل</button>
     <div id="progressContainer"><div id="progressBar"></div></div>
 </section>
 
 <section id="preview" class="section">
     <h2>معاينة القالب المطرز</h2>
-    <div class="console"><pre id="consoleLog">جاهز لاستقبال الصور...</pre></div>
+    <div class="console"><pre id="consoleLog">جاهز لاستقبال الملفات...</pre></div>
     <canvas id="canvas"></canvas>
 </section>
-
-<section id="about" class="section">
-    <h2>من نحن</h2>
-    <p>أداة تحويل أي صورة إلى قالب مطرز جاهز للعمل بضغطة زر.</p>
-    <p>تم تطوير هذا الموقع من قبل <strong>ملهم</strong> و <strong>فارس</strong>.</p>
-</section>
 </main>
-
-<footer>&copy; 2025 ML FA2025 - كل الحقوق محفوظة</footer>
 
 <script>
 const canvas = document.getElementById('canvas');
@@ -66,36 +48,43 @@ const ctx = canvas.getContext('2d');
 const progressBar = document.getElementById('progressBar');
 const consoleLog = document.getElementById('consoleLog');
 
-let stitches = [];  // مصفوفة نقاط الغرز
+let stitches = [];
 let animationId;
 
 function animateStitches() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    for(let i=0; i<stitches.length; i++){
+    for(let i=0;i<stitches.length;i++){
         ctx.fillStyle = stitches[i].color;
         ctx.fillRect(stitches[i].x, stitches[i].y, 2, 2);
-        if(Math.random()<0.3) {
-            ctx.fillRect(stitches[i].x+Math.random()*1, stitches[i].y+Math.random()*1, 1, 1);
+
+        // إضافة خطوط صغيرة تمثل اتجاه الغرز
+        if(stitches[i].dx && stitches[i].dy){
+            ctx.strokeStyle = stitches[i].color;
+            ctx.beginPath();
+            ctx.moveTo(stitches[i].x, stitches[i].y);
+            ctx.lineTo(stitches[i].x + stitches[i].dx, stitches[i].y + stitches[i].dy);
+            ctx.stroke();
         }
     }
     animationId = requestAnimationFrame(animateStitches);
 }
 
-function generateStitches(img){
+function generateStitchesFromImage(img){
     stitches = [];
     canvas.width = img.width;
     canvas.height = img.height;
     ctx.drawImage(img,0,0);
-    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const imageData = ctx.getImageData(0,0,img.width,img.height);
+
     for(let y=0; y<img.height; y+=2){
         for(let x=0; x<img.width; x+=2){
-            const i = (y*img.width + x) * 4;
+            const i = (y*img.width + x)*4;
             const r = imageData.data[i];
             const g = imageData.data[i+1];
             const b = imageData.data[i+2];
             const gray = (r+g+b)/3;
             if(gray<220){
-                stitches.push({x:x, y:y, color:`rgb(${r},${g},${b})`});
+                stitches.push({x:x, y:y, color:`rgb(${r},${g},${b})`, dx:1, dy:1});
             }
         }
     }
@@ -103,52 +92,51 @@ function generateStitches(img){
     animateStitches();
 }
 
-document.getElementById('uploadBtn').addEventListener('click', async () => {
+document.getElementById('uploadBtn').addEventListener('click', async ()=>{
     const fileInput = document.getElementById('imageUpload');
-    if(fileInput.files.length === 0) { alert("اختر صورة أولاً"); return; }
+    if(fileInput.files.length ===0){ alert("اختر ملف أولاً"); return; }
     const file = fileInput.files[0];
     consoleLog.textContent += `\nتم اختيار الملف: ${file.name}`;
-
     const formData = new FormData();
     formData.append('file', file);
-
-    progressBar.style.width = '0%';
+    progressBar.style.width='0%';
     consoleLog.textContent += `\nبدأ رفع الملف إلى السيرفر...`;
 
-    try {
-        const response = await fetch('https://2025mlfa-2-7e2x.onrender.com/upload', {
-            method: 'POST',
-            body: formData
+    try{
+        const response = await fetch('https://2025mlfa-2-7e2x.onrender.com/upload',{
+            method:'POST',
+            body:formData
         });
 
-        if(!response.ok) { 
+        if(!response.ok){
             const errText = await response.text();
-            consoleLog.textContent += `\nحدث خطأ أثناء التحويل: ${errText}`;
-            alert("حدث خطأ أثناء التحويل: " + errText);
-            return; 
+            consoleLog.textContent += `\nخطأ: ${errText}`;
+            alert("خطأ أثناء التحويل: "+errText);
+            return;
         }
 
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
 
+        // تنزيل DST
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `pattern.dst`;
+        a.href=url;
+        a.download=`pattern.dst`;
         a.click();
         consoleLog.textContent += `\nتم تنزيل ملف DST.`;
 
+        // إنشاء معاينة تفاعلية
         const img = new Image();
-        img.onload = () => {
-            generateStitches(img);
+        img.onload=()=>{
+            generateStitchesFromImage(img);
             consoleLog.textContent += `\nتم عرض المعاينة التفاعلية للقالب المطرز.`;
         };
-        img.src = URL.createObjectURL(file);
+        img.src=URL.createObjectURL(file);
 
-        progressBar.style.width = '100%';
-
-    } catch(err) {
+        progressBar.style.width='100%';
+    }catch(err){
         consoleLog.textContent += `\nخطأ في الاتصال بالسيرفر: ${err}`;
-        alert("خطأ في الاتصال بالسيرفر: " + err);
+        alert("خطأ في الاتصال بالسيرفر");
     }
 });
 </script>
