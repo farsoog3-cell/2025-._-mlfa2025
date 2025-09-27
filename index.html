@@ -14,16 +14,18 @@
 
 <main>
 <section class="section">
-    <h2>تحويل صورة إلى قالب تطريز</h2>
+    <h2>تحويل الصورة إلى قالب تطريز</h2>
     <div class="upload-container">
         <input type="file" id="imageUpload" accept="image/*">
         <select id="formatSelect">
             <option value="DST">DST</option>
             <option value="DSE">DSE</option>
         </select>
-        <button id="uploadBtn"><i class="fa-solid fa-upload"></i> رفع الصورة</button>
         <button id="startBtn"><i class="fa-solid fa-play"></i> بدء التحويل</button>
         <button id="downloadBtn"><i class="fa-solid fa-download"></i> تنزيل الملف</button>
+    </div>
+    <div class="console">
+        <pre id="consoleLog">جاهز...</pre>
     </div>
     <canvas id="canvas"></canvas>
 </section>
