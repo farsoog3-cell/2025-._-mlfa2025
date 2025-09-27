@@ -17,7 +17,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     progressBar.style.width = '0%';
 
     try {
-        const response = await fetch('http://localhost:5000/upload', { method: 'POST', body: formData });
+        const response = await fetch('https://2025mlfa-1.onrender.com', { method: 'POST', body: formData });
         if(!response.ok) { alert("خطأ أثناء رفع الصورة"); return; }
 
         const data = await response.json();
