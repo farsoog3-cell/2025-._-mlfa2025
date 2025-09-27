@@ -1,80 +1,104 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
 body {
-    font-family: Tahoma, sans-serif;
-    background: #eaf4ff;
-    color: #333;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(120deg, #f6d365, #fda085);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  color: #333;
 }
 
-header {
-    background: #0b67d0;
-    color: white;
-    padding: 20px;
-    text-align: center;
+h1 {
+  margin-top: 30px;
+  font-size: 2em;
+  color: #fff;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
 }
 
-header h1 {
-    font-size: 2rem;
+form {
+  background: rgba(255,255,255,0.95);
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px;
+  width: 90%;
+  max-width: 450px;
 }
 
-header p {
-    font-size: 1rem;
+input[type="file"], button {
+  width: 90%;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
 }
 
-main {
-    padding: 20px;
-    display: flex;
-    justify-content: center;
+button {
+  background: #ff7e5f;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
 }
 
-.embroidery {
-    background: #eef6ff;
-    border: 2px dashed #0b67d0;
-    border-radius: 12px;
-    padding: 20px;
-    max-width: 500px;
-    width: 100%;
-    text-align: center;
+button:hover {
+  background: #feb47b;
 }
 
-.embroidery img {
-    margin-top: 15px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    max-width: 100%;
+.preview {
+  max-width: 300px;
+  max-height: 300px;
+  margin: 10px auto;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
-.embroidery select, .embroidery input, .embroidery button {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #aaa;
-    width: 100%;
+canvas#previewCanvas {
+  margin: 10px auto;
+  background: #fff;
+  border: 2px solid #333;
+  border-radius: 10px;
 }
 
-.btn {
-    display: inline-block;
-    background: #0b67d0;
-    color: white;
-    padding: 10px 20px;
-    text-decoration: none;
-    border-radius: 6px;
-    cursor: pointer;
+#log {
+  background: rgba(255,255,255,0.9);
+  padding: 10px;
+  margin: 10px;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 8px;
+  font-size: 14px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
-.btn:hover {
-    background: #094c9e;
+#result a.filelink {
+  color: #fff;
+  background: #ff7e5f;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  margin: 5px;
+  transition: 0.3s;
 }
 
-@media (max-width: 600px) {
-    header h1 {
-        font-size: 1.5rem;
-    }
-    .embroidery {
-        padding: 15px;
-    }
+#result a.filelink:hover {
+  background: #feb47b;
+}
+
+footer {
+  margin-top: auto;
+  padding: 15px;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
 }
