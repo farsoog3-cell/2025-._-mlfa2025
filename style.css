@@ -20,7 +20,6 @@ header .logo {
     font-size:28px;
     font-weight:bold;
     color:#00cfff;
-    margin-bottom:10px;
 }
 
 header nav {
@@ -33,13 +32,9 @@ header nav a {
     color:#fff;
     text-decoration:none;
     font-weight:500;
-    transition: color 0.3s;
-    margin-bottom:10px;
 }
 
-header nav a:hover {
-    color:#00cfff;
-}
+header nav a:hover { color:#00cfff; }
 
 .section {
     max-width:1000px;
@@ -50,10 +45,7 @@ header nav a:hover {
     box-shadow:0 4px 15px rgba(0,0,0,0.3);
 }
 
-h2 {
-    color:#00cfff;
-    margin-bottom:15px;
-}
+h2 { color:#00cfff; margin-bottom:15px; }
 
 .upload-container {
     display:flex;
@@ -63,11 +55,7 @@ h2 {
     flex-wrap: wrap;
 }
 
-input[type="file"], select {
-    padding:10px;
-    border-radius:6px;
-    border:none;
-}
+input[type="file"], select { padding:10px; border-radius:6px; border:none; }
 
 button {
     background:#00cfff;
@@ -83,9 +71,7 @@ button {
     transition: background 0.3s;
 }
 
-button:hover {
-    background:#00a3cc;
-}
+button:hover { background:#00a3cc; }
 
 #progressContainer {
     width:100%;
@@ -96,23 +82,7 @@ button:hover {
     margin-top:10px;
 }
 
-#progressBar {
-    width:0%;
-    height:100%;
-    background:#00cfff;
-    transition: width 0.3s;
-}
-
-.console {
-    background:#000;
-    padding:15px;
-    border-radius:8px;
-    max-height:200px;
-    overflow-y:auto;
-    font-family: monospace;
-    font-size:14px;
-    margin-bottom:15px;
-}
+#progressBar { width:0%; height:100%; background:#00cfff; transition: width 0.3s; }
 
 canvas {
     display:block;
