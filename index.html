@@ -3,64 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mlfa2025.91</title>
+    <title>mlfa2025.91 - تحويل الصورة</title>
     <style>
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #000; /* خلفية سوداء */
-            color: #fff; /* نص أبيض */
+            background-color: #000;
+            color: #fff;
+            text-align: center;
         }
 
         header {
             padding: 20px;
-            text-align: center;
             background-color: #111;
             border-bottom: 2px solid #fff;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 2.5em;
-        }
-
-        nav {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        nav a {
-            color: #fff;
-            text-decoration: none;
-            margin: 0 15px;
-            font-size: 1.2em;
-        }
-
-        nav a:hover {
-            text-decoration: underline;
-        }
-
         section {
-            max-width: 800px;
             margin: 40px auto;
-            padding: 20px;
+            max-width: 800px;
             background-color: #111;
+            padding: 20px;
             border-radius: 10px;
         }
 
-        section h2 {
-            text-align: center;
-            font-size: 2em;
-            margin-bottom: 20px;
+        input[type="file"] {
+            margin: 20px 0;
         }
 
-        footer {
-            text-align: center;
-            padding: 20px;
-            border-top: 2px solid #fff;
-            margin-top: 40px;
+        canvas {
+            margin-top: 20px;
+            border: 1px solid #fff;
+            max-width: 100%;
         }
-
     </style>
 </head>
 <body>
@@ -68,20 +43,56 @@
         <h1>mlfa2025.91</h1>
     </header>
 
-    <nav>
-        <a href="#about">من نحن</a>
-    </nav>
-
-    <section id="about">
-        <h2>من نحن</h2>
-        <p>
-            نحن مطورون هذا الموقع. تم برمجة وتطوير الموقع بواسطة: <strong>فارس وملهم</strong>.<br>
-            نشكر كل من ساهم معنا ويدعم تطوير هذا المشروع.
-        </p>
+    <section>
+        <h2>رفع الصورة وتحويلها إلى أبيض وأسود مع إزالة الخلفية</h2>
+        <input type="file" id="imageInput" accept="image/*">
+        <canvas id="canvas"></canvas>
     </section>
 
-    <footer>
-        &copy; 2025 mlfa2025.91 | جميع الحقوق محفوظة
-    </footer>
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            const img = new Image();
+            img.onload = () => {
+                // ضبط أبعاد الكانفاس
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                // رسم الصورة على الكانفاس
+                ctx.drawImage(img, 0, 0);
+
+                // الحصول على بيانات الصورة
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    // تحويل إلى تدرج الرمادي
+                    const gray = 0.3 * r + 0.59 * g + 0.11 * b;
+
+                    // إزالة الخلفية البيضاء تقريبًا
+                    if (r > 200 && g > 200 && b > 200) {
+                        data[i + 3] = 0; // شفافية
+                    } else {
+                        data[i] = data[i + 1] = data[i + 2] = gray;
+                        data[i + 3] = 255; // عدم الشفافية
+                    }
+                }
+
+                // تحديث الكانفاس
+                ctx.putImageData(imageData, 0, 0);
+            };
+            img.src = URL.createObjectURL(file);
+        });
+    </script>
 </body>
 </html>
