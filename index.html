@@ -1,51 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar">
 <head>
-    <title>Embroidery Simulator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mlfa2025.91</title>
     <style>
-        body { font-family: Arial; text-align: center; background: #f0f0f0; }
-        canvas { border: 1px solid #333; margin-top: 20px; }
-        button { margin-top: 10px; padding: 10px 20px; font-size: 16px; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000; /* خلفية سوداء */
+            color: #fff; /* نص أبيض */
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background-color: #111;
+            border-bottom: 2px solid #fff;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        nav {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 1.2em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        section {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #111;
+            border-radius: 10px;
+        }
+
+        section h2 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            border-top: 2px solid #fff;
+            margin-top: 40px;
+        }
+
     </style>
 </head>
 <body>
-    <h1>Embroidery Simulator</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" name="image" required>
-        <button type="submit">Upload & Simulate</button>
-    </form>
+    <header>
+        <h1>mlfa2025.91</h1>
+    </header>
 
-    <canvas id="canvas" width="500" height="500"></canvas>
-    <br>
-    <a id="downloadLink" style="display:none;">Download DST</a>
+    <nav>
+        <a href="#about">من نحن</a>
+    </nav>
 
-    <script>
-    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
+    <section id="about">
+        <h2>من نحن</h2>
+        <p>
+            نحن مطورون هذا الموقع. تم برمجة وتطوير الموقع بواسطة: <strong>فارس وملهم</strong>.<br>
+            نشكر كل من ساهم معنا ويدعم تطوير هذا المشروع.
+        </p>
+    </section>
 
-        // تغيير الرابط إلى السيرفر الخارجي
-        const res = await fetch('https://2025mlfa-2-7e2x.onrender.com/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // عرض الغرز
-        data.stitches.forEach(stitch => {
-            ctx.beginPath();
-            ctx.moveTo(stitch[0][0], stitch[0][1]);
-            ctx.lineTo(stitch[1][0], stitch[1][1]);
-            ctx.strokeStyle = stitch.color;
-            ctx.stroke();
-        });
-
-        const link = document.getElementById('downloadLink');
-        link.href = 'https://2025mlfa-2-7e2x.onrender.com/download';
-        link.style.display = 'inline';
-        link.textContent = "Download DST File";
-    });
-    </script>
+    <footer>
+        &copy; 2025 mlfa2025.91 | جميع الحقوق محفوظة
+    </footer>
 </body>
 </html>
