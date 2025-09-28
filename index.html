@@ -35,14 +35,13 @@ button:hover { background:#444; }
 </section>
 
 <script>
-const SERVER_URL = "http://localhost:5000/generate_pes"; // غيّره إلى رابط السيرفر عند النشر
+const SERVER_URL = "http://localhost:5000/generate_pes"; // غيّره لرابط السيرفر عند النشر
 
 const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const patternCanvas = document.getElementById('patternCanvas');
 const patternCtx = patternCanvas.getContext('2d');
-
 const extractBtn = document.getElementById('extractBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const fileNameInput = document.getElementById('fileName');
@@ -50,7 +49,7 @@ const fileTypeSelect = document.getElementById('fileType');
 const stitchInfo = document.getElementById('stitchInfo');
 
 let img = new Image();
-let stitchPaths = []; // ⬅️ بدل نقاط: صار عندنا مسارات
+let stitchPaths = [];
 
 // رفع صورة
 imageInput.addEventListener('change', function() {
@@ -66,35 +65,56 @@ imageInput.addEventListener('change', function() {
     img.src = URL.createObjectURL(file);
 });
 
-// استخراج مسارات (بسيطة: كل صف مسار)
+// استخراج المسارات عبر تتبع الحدود
 extractBtn.addEventListener('click', () => {
     const width = canvas.width, height = canvas.height;
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
     stitchPaths = [];
-    const threshold = 120;
-    const step = 8;
-
     patternCtx.clearRect(0, 0, width, height);
     patternCtx.strokeStyle = "#0f0";
 
-    for (let y = 0; y < height; y += step) {
-        let path = [];
-        for (let x = 0; x < width; x += step) {
-            const i = (y * width + x) * 4;
-            const gray = 0.3 * data[i] + 0.59 * data[i+1] + 0.11 * data[i+2];
-            if (gray < threshold) {
-                path.push({x, y});
-            }
+    const threshold = 128;
+    const visited = new Set();
+
+    function isBlack(x, y) {
+        if (x < 0 || y < 0 || x >= width || y >= height) return false;
+        const i = (y * width + x) * 4;
+        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+        return gray < threshold;
+    }
+
+    function trace(x, y) {
+        const path = [];
+        const stack = [[x,y]];
+        while (stack.length) {
+            const [cx, cy] = stack.pop();
+            const key = cx + "," + cy;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            path.push({x: cx, y: cy});
+            [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+                const nx = cx+dx, ny = cy+dy;
+                if (isBlack(nx, ny)) stack.push([nx,ny]);
+            });
         }
-        if (path.length > 1) {
-            stitchPaths.push(path);
-            // رسم للمشاهدة
-            patternCtx.beginPath();
-            patternCtx.moveTo(path[0].x, path[0].y);
-            for (let p of path) patternCtx.lineTo(p.x, p.y);
-            patternCtx.stroke();
+        return path;
+    }
+
+    for (let y=0; y<height; y+=5) {
+        for (let x=0; x<width; x+=5) {
+            if (isBlack(x,y) && !visited.has(x+","+y)) {
+                const path = trace(x,y);
+                if (path.length > 5) {
+                    stitchPaths.push(path);
+                    // رسم توضيحي
+                    patternCtx.beginPath();
+                    patternCtx.moveTo(path[0].x, path[0].y);
+                    for (let p of path) patternCtx.lineTo(p.x, p.y);
+                    patternCtx.stroke();
+                }
+            }
         }
     }
 
@@ -116,7 +136,10 @@ downloadBtn.addEventListener('click', () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paths: stitchPaths })
         })
-        .then(res => res.blob())
+        .then(res => {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.blob();
+        })
         .then(blob => {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
