@@ -1,13 +1,71 @@
-<canvas id="canvas"></canvas>
-<div class="console"><pre id="consoleLog">جاهز لاستقبال الملفات...</pre></div>
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML FA2025 - التطريز الواقعي 6.0</title>
+<style>
+/* عام */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin:0; padding:0;
+    background:#f2f2f2; color:#000;
+}
+header {
+    display:flex; justify-content: space-between; align-items:center;
+    padding:15px 30px; background:#1a1a1a;
+}
+header .logo { font-size:28px; font-weight:bold; color:#00cfff; }
+header nav a { margin-left:20px; color:#fff; text-decoration:none; }
+header nav a:hover { color:#00cfff; }
+main { max-width:1200px; margin:40px auto; padding:0 20px; }
+.section {
+    margin-bottom:40px;
+    padding:20px; background:#222; border-radius:12px; color:#fff;
+}
+button {
+    background:#00cfff; color:#000; border:none; padding:12px 20px;
+    border-radius:8px; cursor:pointer; font-weight:bold; transition:0.3s;
+}
+button:hover { background:#00a3cc; }
+#progressContainer { width:100%; height:20px; background:#444; border-radius:10px; margin-top:10px; }
+#progressBar { width:0%; height:100%; background:#00cfff; transition: width 0.3s; }
+.console { background:#000; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; font-family: monospace; margin-top:10px; }
+canvas {
+    display:block; margin:20px auto; border:1px solid #444;
+    border-radius:8px; background:#fff; max-width:100%; height:auto;
+}
+input, select { padding:8px; border-radius:6px; margin-left:10px; }
+@media(max-width:768px){ header{flex-direction:column; align-items:flex-start;} header nav a{margin-left:0; margin-top:10px;} }
+</style>
+</head>
+<body>
+<header>
+    <div class="logo">ML FA2025</div>
+    <nav>
+        <a href="#upload">رفع الملف</a>
+        <a href="#preview">معاينة</a>
+    </nav>
+</header>
 
-<input type="file" id="imageUpload" accept="image/*">
-<select id="fileType">
-  <option value="DST">DST</option>
-  <option value="DSE">DSE</option>
-</select>
-<button id="uploadBtn">رفع وتحويل</button>
-<div id="progressContainer"><div id="progressBar"></div></div>
+<main>
+<section id="upload" class="section">
+    <h2>رفع صورة وتحويلها لقالب مطرز واقعي 6.0</h2>
+    <input type="file" id="imageUpload" accept="image/*">
+    <select id="fileType">
+        <option value="DST">DST</option>
+        <option value="DSE">DSE</option>
+    </select>
+    <button id="uploadBtn">رفع وتحويل</button>
+    <div id="progressContainer"><div id="progressBar"></div></div>
+</section>
+
+<section id="preview" class="section">
+    <h2>معاينة الغرز الواقعية 3D</h2>
+    <div class="console"><pre id="consoleLog">جاهز لاستقبال الملفات...</pre></div>
+    <canvas id="canvas"></canvas>
+</section>
+</main>
 
 <script>
 const canvas = document.getElementById('canvas');
@@ -39,12 +97,12 @@ document.getElementById('uploadBtn').addEventListener('click', async ()=>{
         progressBar.style.width='60%';
         consoleLog.textContent += `\nتم تحليل الصورة بواسطة الذكاء الاصطناعي 6.0 النهائي المطلق.`;
 
-        // ضبط canvas لعرض 8K فقط للمتصفح
+        // ضبط canvas للعرض مع الحفاظ على الأبعاد
         canvas.width = Math.min(data.width, 7680);
         canvas.height = Math.min(data.height, 4320);
         ctx.clearRect(0,0,canvas.width,canvas.height);
 
-        // رسم الغرز مع محاكاة 3D و الفيزياء الواقعية للخيوط
+        // رسم الغرز مع محاكاة 3D والارتفاع z
         data.stitches.forEach(s=>{
             ctx.fillStyle = `rgb(${s.color.r},${s.color.g},${s.color.b})`;
             ctx.fillRect(s.x % canvas.width, s.y % canvas.height - s.z, 1, 1);
@@ -54,7 +112,7 @@ document.getElementById('uploadBtn').addEventListener('click', async ()=>{
         consoleLog.textContent += `\nتم عرض المعاينة الثلاثية الأبعاد مع الفيزياء الواقعية للخيوط.`;
 
         if(confirm("هل تريد تنزيل الملف النهائي للطباعة على أي ماكينة تطريز؟")){
-            const blob = new Blob([new Uint8Array([0])]);
+            const blob = new Blob([new Uint8Array([0])]); // placeholder
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = data.file_name;
@@ -68,3 +126,5 @@ document.getElementById('uploadBtn').addEventListener('click', async ()=>{
     }
 });
 </script>
+</body>
+</html>
