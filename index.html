@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mlfa2025.91 - استخراج مخطط التطريز المتصل</title>
+<title>mlfa2025.91 - باترونات التطريز</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
     body {
         margin: 0;
@@ -19,21 +20,61 @@
     }
     section {
         margin: 40px auto;
-        max-width: 800px;
+        max-width: 900px;
         background-color: #111;
         padding: 20px;
         border-radius: 10px;
     }
-    input[type="file"], button {
-        margin: 20px 10px;
-        padding: 10px 20px;
+    .buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .buttons-container button, input[type="file"], input[type="text"], select {
+        padding: 10px 15px;
         font-size: 1em;
         cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        transition: 0.2s;
+    }
+    .buttons-container button {
+        background-color: #222;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .buttons-container button:hover {
+        background-color: #444;
     }
     canvas {
         margin-top: 20px;
         border: 1px solid #000;
         max-width: 100%;
+    }
+    label {
+        margin: 0 10px;
+    }
+    input[type="text"] {
+        width: 150px;
+        border-radius: 5px;
+        border: 1px solid #fff;
+        background-color: #111;
+        color: #fff;
+    }
+    select {
+        border-radius: 5px;
+        border: 1px solid #fff;
+        background-color: #111;
+        color: #fff;
+    }
+    #stitchInfo {
+        margin-top: 10px;
+        font-size: 1.1em;
+        color: #0f0;
     }
 </style>
 </head>
@@ -43,20 +84,33 @@
 </header>
 
 <section>
-    <h2>رفع الصورة واستخراج مخطط التطريز المتصل</h2>
-    <input type="file" id="imageInput" accept="image/*">
-    <br>
-    <button id="bwBtn">أبيض وأسود</button>
-    <button id="sketchBtn">رسم</button>
-    <button id="extractBtn">نسخ المخطط المتصل</button>
-    <button id="downloadBtn">تنزيل المخطط</button>
-    <br>
+    <h2>رفع الصورة واستخراج باترونات التطريز</h2>
+
+    <div class="buttons-container">
+        <label><i class="fa-solid fa-image"></i> رفع صورة
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+        <button id="bwBtn"><i class="fa-solid fa-circle-half-stroke"></i> أبيض وأسود</button>
+        <button id="sketchBtn"><i class="fa-solid fa-pencil"></i> رسم</button>
+        <button id="extractBtn"><i class="fa-solid fa-diagram-project"></i> استخراج باترونات متصلة</button>
+        <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف">
+        <select id="fileType">
+            <option value="pes">PES (Brother)</option>
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+        </select>
+        <button id="downloadBtn"><i class="fa-solid fa-download"></i> تنزيل المخطط</button>
+    </div>
+
     <canvas id="canvas"></canvas>
     <br>
     <canvas id="patternCanvas" style="margin-top:30px;"></canvas>
+    <div id="stitchInfo"></div>
 </section>
 
 <script>
+const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/generate_pes";
+
 const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -69,7 +123,12 @@ const sketchBtn = document.getElementById('sketchBtn');
 const extractBtn = document.getElementById('extractBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 
+const fileNameInput = document.getElementById('fileName');
+const fileTypeSelect = document.getElementById('fileType');
+const stitchInfo = document.getElementById('stitchInfo');
+
 let img = new Image();
+let stitchPoints = []; // لتخزين نقاط الغرز
 
 // رفع الصورة
 imageInput.addEventListener('change', function() {
@@ -118,7 +177,7 @@ sketchBtn.addEventListener('click', () => {
     ctx.putImageData(imageData, 0, 0);
 });
 
-// استخراج المخطط المتصل
+// استخراج باترونات متصلة
 extractBtn.addEventListener('click', () => {
     ctx.drawImage(img, 0, 0);
     const width = canvas.width;
@@ -132,59 +191,71 @@ extractBtn.addEventListener('click', () => {
     patternCtx.strokeStyle = "#000";
     patternCtx.lineWidth = 1;
 
+    stitchPoints = []; // إعادة تعيين نقاط الغرز
+
     const threshold = 120;
+    const step = 6;
+    const angle = Math.PI / 4;
 
-    // خوارزمية بسيطة للربط المتصل: تمر عبر البكسلات السوداء وتسلسلها
-    let visited = Array(height).fill(0).map(()=>Array(width).fill(false));
-
-    function isBlack(x,y){
-        if(x<0 || x>=width || y<0 || y>=height) return false;
-        const i = (y*width + x)*4;
-        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
-        return gray < threshold;
-    }
-
-    function dfs(x,y,ctx){
-        let stack = [{x,y}];
-        ctx.beginPath();
-        ctx.moveTo(x,y);
-        while(stack.length>0){
-            let p = stack.pop();
-            const px = p.x, py = p.y;
-            if(visited[py][px]) continue;
-            visited[py][px] = true;
-            ctx.lineTo(px,py);
-
-            // تحقق من 8 الاتجاهات
-            const dirs = [
-                {dx:-1,dy:0},{dx:1,dy:0},{dx:0,dy:-1},{dx:0,dy:1},
-                {dx:-1,dy:-1},{dx:1,dy:-1},{dx:-1,dy:1},{dx:1,dy:1}
-            ];
-            for(const d of dirs){
-                const nx = px+d.dx, ny=py+d.dy;
-                if(nx>=0 && nx<width && ny>=0 && ny<height && !visited[ny][nx] && isBlack(nx,ny)){
-                    stack.push({x:nx,y:ny});
-                }
-            }
-        }
-        ctx.stroke();
-    }
-
-    for(let y=0;y<height;y++){
-        for(let x=0;x<width;x++){
-            if(!visited[y][x] && isBlack(x,y)){
-                dfs(x,y,patternCtx);
+    for(let y=0; y<height; y+=step){
+        for(let x=0; x<width; x+=step){
+            const i = (y*width + x)*4;
+            const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+            if(gray < threshold){
+                const len = step;
+                const x2 = x + len * Math.cos(angle);
+                const y2 = y + len * Math.sin(angle);
+                patternCtx.beginPath();
+                patternCtx.moveTo(x, y);
+                patternCtx.lineTo(x2, y2);
+                patternCtx.stroke();
+                stitchPoints.push({x:x, y:y});
             }
         }
     }
+
+    stitchInfo.textContent = `عدد الغرز: ${stitchPoints.length}`;
 });
 
 // تنزيل المخطط
 downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'pattern_connected.png';
-    link.href = patternCanvas.toDataURL('image/png');
-    link.click();
+    const fileName = fileNameInput.value || 'stitch_pattern';
+    const fileType = fileTypeSelect.value;
+
+    if(fileType === 'pes'){
+        if(stitchPoints.length === 0){
+            alert("يرجى استخراج الباترونات أولاً!");
+            return;
+        }
+        stitchInfo.textContent = "جارٍ إنشاء ملف PES...";
+        fetch(SERVER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ points: stitchPoints })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${fileName}.pes`;
+            link.click();
+            stitchInfo.textContent = `تم إنشاء ملف PES بنجاح! عدد الغرز: ${stitchPoints.length}`;
+        })
+        .catch(err => {
+            console.error(err);
+            stitchInfo.textContent = "حدث خطأ أثناء إنشاء ملف PES.";
+        });
+    } else {
+        const link = document.createElement('a');
+        if(fileType === 'jpg'){
+            link.href = patternCanvas.toDataURL('image/jpeg');
+        } else {
+            link.href = patternCanvas.toDataURL('image/png');
+        }
+        link.download = `${fileName}.${fileType}`;
+        link.click();
+        stitchInfo.textContent = `تم تنزيل الصورة. عدد الغرز: ${stitchPoints.length}`;
+    }
 });
 </script>
 </body>
