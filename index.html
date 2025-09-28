@@ -3,45 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>باترونات التطريز - مسارات</title>
+<title>mlfa2025.91 - باترونات التطريز</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
-body { background:#000; color:#fff; font-family:Arial; text-align:center; margin:0; }
-header { background:#111; padding:15px; border-bottom:2px solid #fff; }
-section { max-width:900px; margin:30px auto; padding:20px; background:#111; border-radius:10px; }
-canvas { margin-top:20px; border:1px solid #333; max-width:100%; }
-button, input, select { padding:8px 12px; margin:5px; border-radius:5px; border:none; }
-button { background:#222; color:#fff; cursor:pointer; }
-button:hover { background:#444; }
+    body {margin:0;font-family:Arial;background:#000;color:#fff;text-align:center}
+    header{padding:20px;background:#111;border-bottom:2px solid #fff}
+    section{margin:40px auto;max-width:900px;background:#111;padding:20px;border-radius:10px}
+    .buttons-container{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin-bottom:20px}
+    .buttons-container button,input[type="file"],input[type="text"],select{padding:10px 15px;font-size:1em;cursor:pointer;border:none;border-radius:5px;transition:0.2s}
+    .buttons-container button{background:#222;color:#fff;display:flex;align-items:center;gap:5px}
+    .buttons-container button:hover{background:#444}
+    canvas{margin-top:20px;border:1px solid #000;max-width:100%}
+    input[type="text"],select{border:1px solid #fff;background:#111;color:#fff}
+    #stitchInfo{margin-top:10px;font-size:1.1em;color:#0f0}
 </style>
 </head>
 <body>
-<header>
-    <h1>✨ استخراج مسارات التطريز ✨</h1>
-</header>
+<header><h1>mlfa2025.91</h1></header>
 
 <section>
-    <input type="file" id="imageInput" accept="image/*">
-    <button id="extractBtn">📐 استخراج المسارات</button>
-    <input type="text" id="fileName" value="stitch_pattern">
-    <select id="fileType">
-        <option value="pes">PES</option>
-        <option value="png">PNG</option>
-    </select>
-    <button id="downloadBtn">⬇️ تنزيل</button>
-    <br>
+    <h2>رفع الصورة واستخراج باترونات التطريز</h2>
+    <div class="buttons-container">
+        <label><i class="fa-solid fa-image"></i> رفع صورة
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+        <button id="extractBtn"><i class="fa-solid fa-diagram-project"></i> استخراج</button>
+        <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف">
+        <select id="fileType">
+            <option value="pes">PES (Brother)</option>
+            <option value="des">DES (Wilcom - تحويل لاحقاً)</option>
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+        </select>
+        <button id="downloadBtn"><i class="fa-solid fa-download"></i> تنزيل</button>
+    </div>
+
     <canvas id="canvas"></canvas>
-    <canvas id="patternCanvas" style="margin-top:20px;"></canvas>
+    <br>
+    <canvas id="patternCanvas" style="margin-top:30px;"></canvas>
     <div id="stitchInfo"></div>
 </section>
 
 <script>
-const SERVER_URL = "http://localhost:5000/generate_pes"; // غيّره لرابط السيرفر عند النشر
+const SERVER_URL = "http://127.0.0.1:5000/generate_pattern"; // عدل الرابط إذا مستضيف السيرفر
 
-const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const patternCanvas = document.getElementById('patternCanvas');
 const patternCtx = patternCanvas.getContext('2d');
+const imageInput = document.getElementById('imageInput');
 const extractBtn = document.getElementById('extractBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const fileNameInput = document.getElementById('fileName');
@@ -49,7 +59,7 @@ const fileTypeSelect = document.getElementById('fileType');
 const stitchInfo = document.getElementById('stitchInfo');
 
 let img = new Image();
-let stitchPaths = [];
+let stitchPoints = [];
 
 // رفع صورة
 imageInput.addEventListener('change', function() {
@@ -65,97 +75,62 @@ imageInput.addEventListener('change', function() {
     img.src = URL.createObjectURL(file);
 });
 
-// استخراج المسارات عبر تتبع الحدود
+// استخراج بسيط (مثال)
 extractBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
     const width = canvas.width, height = canvas.height;
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-
-    stitchPaths = [];
-    patternCtx.clearRect(0, 0, width, height);
-    patternCtx.strokeStyle = "#0f0";
-
-    const threshold = 128;
-    const visited = new Set();
-
-    function isBlack(x, y) {
-        if (x < 0 || y < 0 || x >= width || y >= height) return false;
-        const i = (y * width + x) * 4;
-        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
-        return gray < threshold;
-    }
-
-    function trace(x, y) {
-        const path = [];
-        const stack = [[x,y]];
-        while (stack.length) {
-            const [cx, cy] = stack.pop();
-            const key = cx + "," + cy;
-            if (visited.has(key)) continue;
-            visited.add(key);
-            path.push({x: cx, y: cy});
-            [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
-                const nx = cx+dx, ny = cy+dy;
-                if (isBlack(nx, ny)) stack.push([nx,ny]);
-            });
-        }
-        return path;
-    }
-
-    for (let y=0; y<height; y+=5) {
-        for (let x=0; x<width; x+=5) {
-            if (isBlack(x,y) && !visited.has(x+","+y)) {
-                const path = trace(x,y);
-                if (path.length > 5) {
-                    stitchPaths.push(path);
-                    // رسم توضيحي
-                    patternCtx.beginPath();
-                    patternCtx.moveTo(path[0].x, path[0].y);
-                    for (let p of path) patternCtx.lineTo(p.x, p.y);
-                    patternCtx.stroke();
-                }
+    const data = ctx.getImageData(0,0,width,height).data;
+    stitchPoints = [];
+    const step=6, threshold=120, angle=Math.PI/4;
+    patternCtx.fillStyle="#fff"; patternCtx.fillRect(0,0,width,height);
+    patternCtx.strokeStyle="#000"; patternCtx.lineWidth=1;
+    for(let y=0;y<height;y+=step){
+        for(let x=0;x<width;x+=step){
+            const i=(y*width+x)*4;
+            const gray=0.3*data[i]+0.59*data[i+1]+0.11*data[i+2];
+            if(gray<threshold){
+                const x2=x+step*Math.cos(angle),y2=y+step*Math.sin(angle);
+                patternCtx.beginPath();patternCtx.moveTo(x,y);patternCtx.lineTo(x2,y2);patternCtx.stroke();
+                stitchPoints.push({x,y});
             }
         }
     }
-
-    stitchInfo.textContent = `عدد المسارات: ${stitchPaths.length}`;
+    stitchInfo.textContent=`عدد الغرز: ${stitchPoints.length}`;
 });
 
-// تنزيل الملف
+// تنزيل
 downloadBtn.addEventListener('click', () => {
-    const fileName = fileNameInput.value || "stitch_pattern";
-    const fileType = fileTypeSelect.value;
-
-    if (fileType === "pes") {
-        if (stitchPaths.length === 0) {
-            alert("⚠️ استخرج المسارات أولاً!");
-            return;
-        }
-        fetch(SERVER_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paths: stitchPaths })
+    const fileName=fileNameInput.value||'stitch_pattern';
+    const fileType=fileTypeSelect.value;
+    if(fileType==="pes"||fileType==="des"){
+        if(stitchPoints.length===0){alert("استخرج الباترونات أولاً!");return;}
+        stitchInfo.textContent="جارٍ إنشاء الملف...";
+        fetch(SERVER_URL,{
+            method:"POST",
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({paths:[stitchPoints], type:fileType})
         })
-        .then(res => {
-            if (!res.ok) throw new Error("HTTP " + res.status);
-            return res.blob();
+        .then(r=>r.blob())
+        .then(blob=>{
+            const a=document.createElement("a");
+            a.href=URL.createObjectURL(blob);
+            a.download=`${fileName}.${fileType}`;
+            a.click();
+            if(fileType==="des"){
+                alert("⚠️ الملف DES تم توليده من PES. قد تحتاج لتحويله في Wilcom ليعمل بشكل صحيح.");
+            }
+            stitchInfo.textContent="✅ تم التنزيل.";
         })
-        .then(blob => {
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = fileName + ".pes";
-            link.click();
-            stitchInfo.textContent = `✅ تم إنشاء ملف PES (${stitchPaths.length} مسار)`;
-        })
-        .catch(err => {
-            console.error(err);
-            stitchInfo.textContent = "❌ خطأ في إنشاء ملف PES.";
+        .catch(e=>{
+            console.error(e);
+            stitchInfo.textContent="❌ خطأ في إنشاء الملف.";
         });
-    } else {
-        const link = document.createElement('a');
-        link.href = patternCanvas.toDataURL("image/png");
-        link.download = fileName + ".png";
-        link.click();
+    }else{
+        const a=document.createElement("a");
+        a.href=patternCanvas.toDataURL(fileType==="jpg"?"image/jpeg":"image/png");
+        a.download=`${fileName}.${fileType}`;
+        a.click();
+        stitchInfo.textContent="✅ تم تنزيل الصورة.";
     }
 });
 </script>
