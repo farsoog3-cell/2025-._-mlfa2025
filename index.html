@@ -3,129 +3,259 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>باترونات التطريز - mlfa2025.91</title>
+<title>mlfa2025.91 - باترونات التطريز</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
-body {margin:0;font-family:Arial,sans-serif;text-align:center;background-color:#000;color:#fff;}
-header {padding:20px;background-color:#111;border-bottom:2px solid #fff;}
-section {margin:40px auto;max-width:900px;background-color:#111;padding:20px;border-radius:10px;}
-canvas {border:1px solid #fff;max-width:100%;background:#111;margin-top:20px;}
-.buttons-container {margin:20px 0;}
-button, input[type="file"], input[type="text"] {padding:10px 15px;margin:5px;border-radius:5px;border:none;cursor:pointer;}
-button {background:#222;color:#fff;}
-button:hover {background:#444;}
-#stitchInfo {margin-top:10px;color:lime;}
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #000;
+        color: #fff;
+        text-align: center;
+    }
+    header {
+        padding: 20px;
+        background-color: #111;
+        border-bottom: 2px solid #fff;
+    }
+    section {
+        margin: 40px auto;
+        max-width: 900px;
+        background-color: #111;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    .buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .buttons-container button, input[type="file"], input[type="text"], select {
+        padding: 10px 15px;
+        font-size: 1em;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        transition: 0.2s;
+    }
+    .buttons-container button {
+        background-color: #222;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .buttons-container button:hover {
+        background-color: #444;
+    }
+    canvas {
+        margin-top: 20px;
+        border: 1px solid #000;
+        max-width: 100%;
+    }
+    label {
+        margin: 0 10px;
+    }
+    input[type="text"] {
+        width: 150px;
+        border-radius: 5px;
+        border: 1px solid #fff;
+        background-color: #111;
+        color: #fff;
+    }
+    select {
+        border-radius: 5px;
+        border: 1px solid #fff;
+        background-color: #111;
+        color: #fff;
+    }
+    #stitchInfo {
+        margin-top: 10px;
+        font-size: 1.1em;
+        color: #0f0;
+    }
 </style>
 </head>
 <body>
 <header>
-<h1>mlfa2025.91 - محاكاة التطريز</h1>
+    <h1>mlfa2025.91</h1>
 </header>
 
 <section>
-<h2>رفع صورة وتحويلها لمسار غرزة متصل</h2>
-<div class="buttons-container">
-<input type="file" id="imageInput" accept=".png,.jpg,.jpeg">
-<input type="text" id="fileName" placeholder="اسم الملف" value="stitch_pattern">
-<button id="downloadBtn" disabled>تنزيل PES</button>
-</div>
+    <h2>رفع الصورة واستخراج باترونات التطريز</h2>
 
-<canvas id="canvas"></canvas>
-<div id="stitchInfo"></div>
+    <div class="buttons-container">
+        <label><i class="fa-solid fa-image"></i> رفع صورة
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+        <button id="bwBtn"><i class="fa-solid fa-circle-half-stroke"></i> أبيض وأسود</button>
+        <button id="sketchBtn"><i class="fa-solid fa-pencil"></i> رسم</button>
+        <button id="extractBtn"><i class="fa-solid fa-diagram-project"></i> استخراج باترونات متصلة</button>
+        <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف">
+        <select id="fileType">
+            <option value="pes">PES (Brother)</option>
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+        </select>
+        <button id="downloadBtn"><i class="fa-solid fa-download"></i> تنزيل المخطط</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <br>
+    <canvas id="patternCanvas" style="margin-top:30px;"></canvas>
+    <div id="stitchInfo"></div>
 </section>
 
 <script>
 const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/generate_pes";
+
 const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
+const patternCanvas = document.getElementById('patternCanvas');
+const patternCtx = patternCanvas.getContext('2d');
+
+const bwBtn = document.getElementById('bwBtn');
+const sketchBtn = document.getElementById('sketchBtn');
+const extractBtn = document.getElementById('extractBtn');
 const downloadBtn = document.getElementById('downloadBtn');
+
 const fileNameInput = document.getElementById('fileName');
+const fileTypeSelect = document.getElementById('fileType');
 const stitchInfo = document.getElementById('stitchInfo');
 
 let img = new Image();
-let stitchPoints = [];
+let stitchPoints = []; // لتخزين نقاط الغرز
 
-// عرض الصورة ومحاكاة مسار الإبرة
-imageInput.addEventListener('change', ()=>{
-    const file = imageInput.files[0];
-    if(!file) return;
+// رفع الصورة
+imageInput.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        img.src = e.target.result;
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        patternCanvas.width = img.width;
+        patternCanvas.height = img.height;
+
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
     };
-    reader.readAsDataURL(file);
+    img.src = URL.createObjectURL(file);
 });
 
-img.onload = ()=>{
-    const MAX_SIZE = 400;
-    const scale = Math.min(MAX_SIZE/img.width, MAX_SIZE/img.height, 1);
-    canvas.width = img.width*scale;
-    canvas.height = img.height*scale;
+// أبيض وأسود
+bwBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+        const bw = gray > 128 ? 255 : 0;
+        data[i] = data[i+1] = data[i+2] = bw;
+    }
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(imageData, 0, 0);
+});
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+// رسم
+sketchBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+        data[i] = data[i+1] = data[i+2] = 255 - gray;
+    }
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(imageData, 0, 0);
+});
 
-    // تحويل الصورة لمسار غرزة متصل
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = img.width;
-    tempCanvas.height = img.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(img,0,0);
+// استخراج باترونات متصلة
+extractBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
 
-    const imgData = tempCtx.getImageData(0,0,tempCanvas.width,tempCanvas.height);
-    const data = imgData.data;
-    stitchPoints = [];
-    const spacing = 3;
+    patternCtx.fillStyle = "#fff";
+    patternCtx.fillRect(0, 0, width, height);
 
-    for(let y=0;y<tempCanvas.height;y+=spacing){
-        for(let x=0;x<tempCanvas.width;x+=spacing){
-            const idx = (y*tempCanvas.width + x)*4;
-            const brightness = data[idx]*0.299 + data[idx+1]*0.587 + data[idx+2]*0.114;
-            if(brightness < 200){
-                stitchPoints.push([x*scale,y*scale]);
+    patternCtx.strokeStyle = "#000";
+    patternCtx.lineWidth = 1;
+
+    stitchPoints = []; // إعادة تعيين نقاط الغرز
+
+    const threshold = 120;
+    const step = 6;
+    const angle = Math.PI / 4;
+
+    for(let y=0; y<height; y+=step){
+        for(let x=0; x<width; x+=step){
+            const i = (y*width + x)*4;
+            const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+            if(gray < threshold){
+                const len = step;
+                const x2 = x + len * Math.cos(angle);
+                const y2 = y + len * Math.sin(angle);
+                patternCtx.beginPath();
+                patternCtx.moveTo(x, y);
+                patternCtx.lineTo(x2, y2);
+                patternCtx.stroke();
+                stitchPoints.push({x:x, y:y});
             }
         }
     }
 
-    // رسم مسار الإبرة بمحاكاة خيط متصل
-    ctx.strokeStyle = '#FFD700'; // لون خيط ستان ذهبي
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    if(stitchPoints.length>0){
-        ctx.moveTo(stitchPoints[0][0], stitchPoints[0][1]);
-        for(let i=1;i<stitchPoints.length;i++){
-            ctx.lineTo(stitchPoints[i][0], stitchPoints[i][1]);
+    stitchInfo.textContent = `عدد الغرز: ${stitchPoints.length}`;
+});
+
+// تنزيل المخطط
+downloadBtn.addEventListener('click', () => {
+    const fileName = fileNameInput.value || 'stitch_pattern';
+    const fileType = fileTypeSelect.value;
+
+    if(fileType === 'pes'){
+        if(stitchPoints.length === 0){
+            alert("يرجى استخراج الباترونات أولاً!");
+            return;
         }
-    }
-    ctx.stroke();
-
-    downloadBtn.disabled = false;
-    stitchInfo.textContent = "تم إنشاء المخطط على الكانفاس!";
-};
-
-// تنزيل ملف PES
-downloadBtn.addEventListener('click', ()=>{
-    if(!imageInput.files[0]) return;
-    const formData = new FormData();
-    formData.append('image', imageInput.files[0]);
-    const safeFileName = (fileNameInput.value||'stitch_pattern').replace(/[^a-z0-9_\-]/gi,'_');
-    stitchInfo.textContent = "جارٍ إنشاء ملف PES...";
-
-    fetch(SERVER_URL,{method:'POST',body:formData})
-    .then(resp=>{
-        if(!resp.ok) throw new Error("فشل إنشاء PES");
-        return resp.blob();
-    }).then(blob=>{
+        stitchInfo.textContent = "جارٍ إنشاء ملف PES...";
+        fetch(SERVER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ points: stitchPoints })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${fileName}.pes`;
+            link.click();
+            stitchInfo.textContent = `تم إنشاء ملف PES بنجاح! عدد الغرز: ${stitchPoints.length}`;
+        })
+        .catch(err => {
+            console.error(err);
+            stitchInfo.textContent = "حدث خطأ أثناء إنشاء ملف PES.";
+        });
+    } else {
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = safeFileName+'.pes';
+        if(fileType === 'jpg'){
+            link.href = patternCanvas.toDataURL('image/jpeg');
+        } else {
+            link.href = patternCanvas.toDataURL('image/png');
+        }
+        link.download = `${fileName}.${fileType}`;
         link.click();
-        stitchInfo.textContent = "تم إنشاء ملف PES بنجاح!";
-    }).catch(err=>{
-        console.error(err);
-        stitchInfo.textContent = "حدث خطأ أثناء إنشاء ملف PES.";
-    });
+        stitchInfo.textContent = `تم تنزيل الصورة. عدد الغرز: ${stitchPoints.length}`;
+    }
 });
 </script>
 </body>
