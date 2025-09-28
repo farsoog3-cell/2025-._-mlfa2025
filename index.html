@@ -1,135 +1,172 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mlfa2025.91 - تحويل الصورة</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #000;
-            color: #fff;
-            text-align: center;
-        }
-
-        header {
-            padding: 20px;
-            background-color: #111;
-            border-bottom: 2px solid #fff;
-        }
-
-        section {
-            margin: 40px auto;
-            max-width: 800px;
-            background-color: #111;
-            padding: 20px;
-            border-radius: 10px;
-        }
-
-        input[type="file"], button {
-            margin: 20px 10px;
-            padding: 10px 20px;
-            font-size: 1em;
-            cursor: pointer;
-        }
-
-        canvas {
-            margin-top: 20px;
-            border: 1px solid #000;
-            max-width: 100%;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mlfa2025.91 - تحويل الصور</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #000;
+        color: #fff;
+        text-align: center;
+    }
+    header {
+        padding: 20px;
+        background-color: #111;
+        border-bottom: 2px solid #fff;
+    }
+    section {
+        margin: 40px auto;
+        max-width: 800px;
+        background-color: #111;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    input[type="file"], button {
+        margin: 20px 10px;
+        padding: 10px 20px;
+        font-size: 1em;
+        cursor: pointer;
+    }
+    canvas {
+        margin-top: 20px;
+        border: 1px solid #000;
+        max-width: 100%;
+    }
+</style>
 </head>
 <body>
-    <header>
-        <h1>mlfa2025.91</h1>
-    </header>
+<header>
+    <h1>mlfa2025.91</h1>
+</header>
 
-    <section>
-        <h2>رفع الصورة وتحويلها</h2>
-        <input type="file" id="imageInput" accept="image/*">
-        <br>
-        <button id="bwBtn">تحويل إلى أبيض وأسود</button>
-        <button id="sketchBtn">تحويل إلى رسم</button>
-        <button id="downloadBtn">تنزيل الصورة</button>
-        <br>
-        <canvas id="canvas"></canvas>
-    </section>
+<section>
+    <h2>رفع الصورة وتحويلها</h2>
+    <input type="file" id="imageInput" accept="image/*">
+    <br>
+    <button id="bwBtn">أبيض وأسود</button>
+    <button id="sketchBtn">رسم</button>
+    <button id="stitchBtn">مخطط غرزة إبرة متصل</button>
+    <button id="downloadBtn">تنزيل الصورة</button>
+    <br>
+    <canvas id="canvas"></canvas>
+</section>
 
-    <script>
-        const imageInput = document.getElementById('imageInput');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+<script>
+const imageInput = document.getElementById('imageInput');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-        const bwBtn = document.getElementById('bwBtn');
-        const sketchBtn = document.getElementById('sketchBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
+const bwBtn = document.getElementById('bwBtn');
+const sketchBtn = document.getElementById('sketchBtn');
+const stitchBtn = document.getElementById('stitchBtn');
+const downloadBtn = document.getElementById('downloadBtn');
 
-        let img = new Image();
+let img = new Image();
 
-        imageInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (!file) return;
+// رفع الصورة
+imageInput.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
 
-            img.onload = () => {
-                canvas.width = img.width;
-                canvas.height = img.height;
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
 
-                // رسم خلفية بيضاء أولاً
-                ctx.fillStyle = "#fff";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                ctx.drawImage(img, 0, 0);
-            };
-            img.src = URL.createObjectURL(file);
-        });
+        ctx.drawImage(img, 0, 0);
+    };
+    img.src = URL.createObjectURL(file);
+});
 
-        // تحويل الصورة إلى أبيض وأسود
-        bwBtn.addEventListener('click', () => {
-            ctx.drawImage(img, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
+// أبيض وأسود
+bwBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+        const bw = gray > 128 ? 255 : 0;
+        data[i] = data[i+1] = data[i+2] = bw;
+    }
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(imageData, 0, 0);
+});
 
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = 0.3 * data[i] + 0.59 * data[i+1] + 0.11 * data[i+2];
-                const bw = gray > 128 ? 255 : 0;
-                data[i] = data[i+1] = data[i+2] = bw;
+// رسم
+sketchBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+        data[i] = data[i+1] = data[i+2] = 255 - gray;
+    }
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(imageData, 0, 0);
+});
+
+// مخطط غرزة إبرة متصل احترافي
+stitchBtn.addEventListener('click', () => {
+    ctx.drawImage(img, 0, 0);
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    // مسح الخلفية
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1;
+
+    function getGray(x, y) {
+        const i = (y * width + x) * 4;
+        return 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+    }
+
+    // إنشاء مسار متصل بتتبع الحواف
+    let pathPoints = [];
+    const threshold = 100;
+
+    for (let y = 1; y < height-1; y++) {
+        for (let x = 1; x < width-1; x++) {
+            const gx = -getGray(x-1,y-1)-2*getGray(x-1,y)-getGray(x-1,y+1)
+                       + getGray(x+1,y-1)+2*getGray(x+1,y)+getGray(x+1,y+1);
+            const gy = -getGray(x-1,y-1)-2*getGray(x,y-1)-getGray(x+1,y-1)
+                       + getGray(x-1,y+1)+2*getGray(x,y+1)+getGray(x+1,y+1);
+            const g = Math.sqrt(gx*gx + gy*gy);
+            if (g > threshold) {
+                pathPoints.push({x: x, y: y});
             }
+        }
+    }
 
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.putImageData(imageData, 0, 0);
-        });
+    // رسم مسار متصل
+    if(pathPoints.length > 0){
+        ctx.beginPath();
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for(let i=1; i<pathPoints.length; i++){
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+        ctx.stroke();
+    }
+});
 
-        // تحويل الصورة إلى رسم (Sketch)
-        sketchBtn.addEventListener('click', () => {
-            ctx.drawImage(img, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];
-                const g = data[i+1];
-                const b = data[i+2];
-                const gray = 0.3 * r + 0.59 * g + 0.11 * b;
-
-                // تأثير الرسم: أي جزء فاتح يصبح أبيض، الباقي أسود
-                data[i] = data[i+1] = data[i+2] = 255 - gray;
-            }
-
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.putImageData(imageData, 0, 0);
-        });
-
-        // تنزيل الصورة
-        downloadBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'converted_image.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-    </script>
+// تنزيل الصورة
+downloadBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'converted_image.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+});
+</script>
 </body>
 </html>
