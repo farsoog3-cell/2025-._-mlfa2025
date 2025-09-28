@@ -1,137 +1,331 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mlfa2025.91 - باترونات التطريز</title>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>توليد غرز حقيقية - Embroidery</title>
 <style>
-    body {margin:0;font-family:Arial;background:#000;color:#fff;text-align:center}
-    header{padding:20px;background:#111;border-bottom:2px solid #fff}
-    section{margin:40px auto;max-width:900px;background:#111;padding:20px;border-radius:10px}
-    .buttons-container{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin-bottom:20px}
-    .buttons-container button,input[type="file"],input[type="text"],select{padding:10px 15px;font-size:1em;cursor:pointer;border:none;border-radius:5px;transition:0.2s}
-    .buttons-container button{background:#222;color:#fff;display:flex;align-items:center;gap:5px}
-    .buttons-container button:hover{background:#444}
-    canvas{margin-top:20px;border:1px solid #000;max-width:100%}
-    input[type="text"],select{border:1px solid #fff;background:#111;color:#fff}
-    #stitchInfo{margin-top:10px;font-size:1.1em;color:#0f0}
+  body{background:#000;color:#fff;font-family:Arial;text-align:center;margin:0}
+  header{background:#111;padding:16px;border-bottom:2px solid #fff}
+  section{max-width:1000px;margin:24px auto;padding:16px;background:#111;border-radius:8px}
+  input,button,select{padding:8px 12px;margin:6px;border-radius:6px;border:none}
+  canvas{border:1px solid #333;max-width:100%}
+  #stitchInfo{color:#0f0;margin-top:10px}
 </style>
 </head>
 <body>
-<header><h1>mlfa2025.91</h1></header>
-
+<header><h1>توليد غرز حقيقية (PES)</h1></header>
 <section>
-    <h2>رفع الصورة واستخراج باترونات التطريز</h2>
-    <div class="buttons-container">
-        <label><i class="fa-solid fa-image"></i> رفع صورة
-            <input type="file" id="imageInput" accept="image/*">
-        </label>
-        <button id="extractBtn"><i class="fa-solid fa-diagram-project"></i> استخراج</button>
-        <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف">
-        <select id="fileType">
-            <option value="pes">PES (Brother)</option>
-            <option value="des">DES (Wilcom - تحويل لاحقاً)</option>
-            <option value="png">PNG</option>
-            <option value="jpg">JPG</option>
-        </select>
-        <button id="downloadBtn"><i class="fa-solid fa-download"></i> تنزيل</button>
-    </div>
-
-    <canvas id="canvas"></canvas>
-    <br>
-    <canvas id="patternCanvas" style="margin-top:30px;"></canvas>
-    <div id="stitchInfo"></div>
+  <input type="file" id="imageInput" accept="image/*">
+  <button id="bwBtn">أبيض/أسود</button>
+  <button id="traceBtn">تتبع الحدود</button>
+  <button id="fillBtn">ملء (Fill)</button>
+  <button id="satinBtn">ساتان (Satinize)</button>
+  <br>
+  <input id="fileName" placeholder="اسم الملف" value="stitch_pattern">
+  <select id="fileType">
+    <option value="pes">PES</option>
+    <option value="des">DES (تسمية فقط)</option>
+    <option value="png">PNG</option>
+  </select>
+  <button id="downloadBtn">تنزيل</button>
+  <div id="stitchInfo"></div>
+  <br>
+  <canvas id="canvas"></canvas>
+  <canvas id="preview" style="margin-top:10px"></canvas>
 </section>
 
 <script>
-const SERVER_URL = "http://127.0.0.1:5000/generate_pattern"; // عدل الرابط إذا مستضيف السيرفر
-
+const SERVER_URL = "http://127.0.0.1:5000/generate_pattern"; // عدِّل عند النشر
+const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const patternCanvas = document.getElementById('patternCanvas');
-const patternCtx = patternCanvas.getContext('2d');
-const imageInput = document.getElementById('imageInput');
-const extractBtn = document.getElementById('extractBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const fileNameInput = document.getElementById('fileName');
-const fileTypeSelect = document.getElementById('fileType');
+const preview = document.getElementById('preview');
+const pctx = preview.getContext('2d');
 const stitchInfo = document.getElementById('stitchInfo');
 
 let img = new Image();
-let stitchPoints = [];
+let commands = []; // القائمة النهائية للأوامر (cmd,x,y, color?)
 
-// رفع صورة
-imageInput.addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
-    img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        patternCanvas.width = img.width;
-        patternCanvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-    };
-    img.src = URL.createObjectURL(file);
+function resetCanvas(w,h){
+  canvas.width = w; canvas.height = h;
+  preview.width = w; preview.height = h;
+  ctx.fillStyle = "#fff"; ctx.fillRect(0,0,w,h);
+  pctx.fillStyle = "#fff"; pctx.fillRect(0,0,w,h);
+}
+
+imageInput.addEventListener('change', () => {
+  const f = imageInput.files[0];
+  if(!f) return;
+  img.onload = () => {
+    resetCanvas(img.width, img.height);
+    ctx.drawImage(img,0,0);
+    pctx.drawImage(img,0,0);
+  }
+  img.src = URL.createObjectURL(f);
 });
 
-// استخراج بسيط (مثال)
-extractBtn.addEventListener('click', () => {
-    ctx.drawImage(img, 0, 0);
-    const width = canvas.width, height = canvas.height;
-    const data = ctx.getImageData(0,0,width,height).data;
-    stitchPoints = [];
-    const step=6, threshold=120, angle=Math.PI/4;
-    patternCtx.fillStyle="#fff"; patternCtx.fillRect(0,0,width,height);
-    patternCtx.strokeStyle="#000"; patternCtx.lineWidth=1;
-    for(let y=0;y<height;y+=step){
-        for(let x=0;x<width;x+=step){
-            const i=(y*width+x)*4;
-            const gray=0.3*data[i]+0.59*data[i+1]+0.11*data[i+2];
-            if(gray<threshold){
-                const x2=x+step*Math.cos(angle),y2=y+step*Math.sin(angle);
-                patternCtx.beginPath();patternCtx.moveTo(x,y);patternCtx.lineTo(x2,y2);patternCtx.stroke();
-                stitchPoints.push({x,y});
+// تحويل للصورة الثابتة (B/W)
+document.getElementById('bwBtn').addEventListener('click', ()=>{
+  ctx.drawImage(img,0,0);
+  const id = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const d = id.data;
+  for(let i=0;i<d.length;i+=4){
+    const g = 0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];
+    const b = g>128?255:0;
+    d[i]=d[i+1]=d[i+2]=b;
+  }
+  ctx.putImageData(id,0,0);
+  pctx.putImageData(id,0,0);
+});
+
+// تتبع حدود بسيط (شبيه بمارسنج سكويرز)
+document.getElementById('traceBtn').addEventListener('click', ()=>{
+  ctx.drawImage(img,0,0);
+  const w = canvas.width, h = canvas.height;
+  const imgd = ctx.getImageData(0,0,w,h);
+  const d = imgd.data;
+  const thresh = 128;
+  // نبني مصفوفة ثنائية
+  const bin = new Uint8Array(w*h);
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i=(y*w+x)*4;
+      const g = 0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];
+      bin[y*w + x] = g < thresh ? 1 : 0;
+    }
+  }
+  // تتبع حدود: سنستخدم مسح بسيط لإيجاد مكونات متصلة ثم نتبعها (4-جيران)
+  const visited = new Uint8Array(w*h);
+  const paths = [];
+  function neighbors(x,y){ return [[1,0],[-1,0],[0,1],[0,-1]]; }
+  for(let y=0;y<h;y+=2){
+    for(let x=0;x<w;x+=2){
+      const idx = y*w + x;
+      if(bin[idx] && !visited[idx]){
+        // flood-fill لإيجاد المكون
+        const stack = [[x,y]];
+        const comp = [];
+        visited[idx]=1;
+        while(stack.length){
+          const [cx,cy] = stack.pop();
+          comp.push([cx,cy]);
+          for(const [dx,dy] of neighbors(cx,cy)){
+            const nx=cx+dx, ny=cy+dy;
+            if(nx>=0 && ny>=0 && nx<w && ny<h){
+              const nidx = ny*w + nx;
+              if(bin[nidx] && !visited[nidx]){
+                visited[nidx]=1;
+                stack.push([nx,ny]);
+              }
             }
+          }
         }
+        if(comp.length>10){
+          // تبسيط المسار: نريد ترتيب نقاط على شكل سلسلة (نحو الخيط)
+          // طريقة بسيطة: نأخذ أقرب جار بشكل greedy لبناء سلسلة
+          const used = new Array(comp.length).fill(false);
+          const ordered = [];
+          // اختر النقطة اليسارية العليا كنقطة بداية
+          let startIndex = 0;
+          for(let i=1;i<comp.length;i++){
+            if(comp[i][1] < comp[startIndex][1] || (comp[i][1]==comp[startIndex][1] && comp[i][0]<comp[startIndex][0])) startIndex=i;
+          }
+          let cur = comp[startIndex];
+          ordered.push({x:cur[0], y:cur[1]});
+          used[startIndex]=true;
+          for(let k=1;k<comp.length;k++){
+            let best=-1; let bd=1e9;
+            for(let i=0;i<comp.length;i++){
+              if(used[i]) continue;
+              const dx = comp[i][0]-cur[0], dy=comp[i][1]-cur[1];
+              const dist = dx*dx+dy*dy;
+              if(dist<bd){ bd=dist; best=i; }
+            }
+            if(best==-1) break;
+            cur = comp[best];
+            ordered.push({x:cur[0], y:cur[1]});
+            used[best]=true;
+          }
+          paths.push(ordered);
+        }
+      }
     }
-    stitchInfo.textContent=`عدد الغرز: ${stitchPoints.length}`;
+  }
+
+  // عرض مرئي للمسارات
+  pctx.clearRect(0,0,w,h);
+  pctx.fillStyle="#fff"; pctx.fillRect(0,0,w,h);
+  pctx.strokeStyle="#00ff88"; pctx.lineWidth=1;
+  pctx.beginPath();
+  for(const path of paths){
+    if(path.length<2) continue;
+    pctx.moveTo(path[0].x, path[0].y);
+    for(let i=1;i<path.length;i++) pctx.lineTo(path[i].x, path[i].y);
+  }
+  pctx.stroke();
+
+  // تحويل المسارات إلى أوامر: لكل path JUMP ثم STITCHs
+  commands = [];
+  for(const path of paths){
+    if(path.length<2) continue;
+    commands.push({cmd:"JUMP", x:path[0].x, y:path[0].y});
+    for(let i=1;i<path.length;i++){
+      commands.push({cmd:"STITCH", x:path[i].x, y:path[i].y});
+    }
+  }
+  stitchInfo.textContent = `تم استخراج ${paths.length} مسارًا، إجمالي أوامر: ${commands.length}`;
 });
 
-// تنزيل
-downloadBtn.addEventListener('click', () => {
-    const fileName=fileNameInput.value||'stitch_pattern';
-    const fileType=fileTypeSelect.value;
-    if(fileType==="pes"||fileType==="des"){
-        if(stitchPoints.length===0){alert("استخرج الباترونات أولاً!");return;}
-        stitchInfo.textContent="جارٍ إنشاء الملف...";
-        fetch(SERVER_URL,{
-            method:"POST",
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({paths:[stitchPoints], type:fileType})
-        })
-        .then(r=>r.blob())
-        .then(blob=>{
-            const a=document.createElement("a");
-            a.href=URL.createObjectURL(blob);
-            a.download=`${fileName}.${fileType}`;
-            a.click();
-            if(fileType==="des"){
-                alert("⚠️ الملف DES تم توليده من PES. قد تحتاج لتحويله في Wilcom ليعمل بشكل صحيح.");
-            }
-            stitchInfo.textContent="✅ تم التنزيل.";
-        })
-        .catch(e=>{
-            console.error(e);
-            stitchInfo.textContent="❌ خطأ في إنشاء الملف.";
-        });
-    }else{
-        const a=document.createElement("a");
-        a.href=patternCanvas.toDataURL(fileType==="jpg"?"image/jpeg":"image/png");
-        a.download=`${fileName}.${fileType}`;
-        a.click();
-        stitchInfo.textContent="✅ تم تنزيل الصورة.";
+// ملء منطقة (zig-zag fill) — توليد غرز تعبئة بسيطة
+document.getElementById('fillBtn').addEventListener('click', ()=>{
+  ctx.drawImage(img,0,0);
+  const w = canvas.width, h = canvas.height;
+  const id = ctx.getImageData(0,0,w,h);
+  const d = id.data;
+  const thresh = 128;
+  // ننشئ قناع ثنائي
+  const mask = new Uint8Array(w*h);
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i=(y*w+x)*4;
+      const g = 0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];
+      mask[y*w+x] = g < thresh ? 1:0;
     }
+  }
+  // Zig-zag fill spacing (px)
+  const spacing = 6;
+  commands = [];
+  pctx.clearRect(0,0,w,h); pctx.fillStyle="#fff"; pctx.fillRect(0,0,w,h);
+  pctx.strokeStyle="#ff8800"; pctx.lineWidth=1;
+  for(let y=0;y<h;y+=spacing){
+    let rowPoints = [];
+    for(let x=0;x<w;x++){
+      if(mask[y*w + x]) rowPoints.push({x,y});
+    }
+    if(rowPoints.length>1){
+      // بحسب اتجاه بديل كل سطر
+      if(((y/spacing)|0) % 2 === 0){
+        // left->right
+        commands.push({cmd:"JUMP", x: rowPoints[0].x, y:rowPoints[0].y});
+        for(const p of rowPoints) commands.push({cmd:"STITCH", x:p.x, y:p.y});
+        pctx.beginPath(); pctx.moveTo(rowPoints[0].x,rowPoints[0].y);
+        for(const p of rowPoints) pctx.lineTo(p.x,p.y);
+        pctx.stroke();
+      } else {
+        // right->left
+        commands.push({cmd:"JUMP", x: rowPoints[rowPoints.length-1].x, y:rowPoints[rowPoints.length-1].y});
+        for(let i=rowPoints.length-1;i>=0;i--) commands.push({cmd:"STITCH", x:rowPoints[i].x, y:rowPoints[i].y});
+        pctx.beginPath(); pctx.moveTo(rowPoints[rowPoints.length-1].x,rowPoints[rowPoints.length-1].y);
+        for(let i=rowPoints.length-1;i>=0;i--) pctx.lineTo(rowPoints[i].x,rowPoints[i].y);
+        pctx.stroke();
+      }
+    }
+  }
+  stitchInfo.textContent = `تم توليد أوامر تعبئة: ${commands.length} أمر`;
+});
+
+// ساتان (للمناطق الضيقة) — تقريب بسيط: استخراج contour ثم توليد خطوط ساتان بعرض محدد
+document.getElementById('satinBtn').addEventListener('click', ()=>{
+  // تبسيط: لنطبق على المسارات الحالية (إن وُجدت) بتحويل كل path إلى زوج متوازي من خطوط وتوليد zigzag بينهما
+  // إذا لم توجد أوامر، نطالب بتتبع أولاً
+  if(commands.length===0){
+    alert("رجاءً استخدم تتبع الحدود أولاً ثم اضغط ساتان على مسار محدد.");
+    return;
+  }
+  const w = canvas.width, h = canvas.height;
+  // سنأخذ المسارات المولدة (نحول commands إلى paths بسيطة)
+  const paths = [];
+  let curPath = null;
+  for(const c of commands){
+    if(c.cmd === "JUMP"){
+      if(curPath && curPath.length>0) paths.push(curPath);
+      curPath = [{x:c.x,y:c.y}];
+    } else if(c.cmd === "STITCH"){
+      if(!curPath) curPath = [{x:c.x,y:c.y}];
+      else curPath.push({x:c.x,y:c.y});
+    }
+  }
+  if(curPath && curPath.length>0) paths.push(curPath);
+  // الآن لكل path نولّد ساتان بسيط بعرض
+  const satinWidth = 10; // بهدلّل، يمكن تعديله
+  const newCommands = [];
+  pctx.clearRect(0,0,w,h); pctx.fillStyle="#fff"; pctx.fillRect(0,0,w,h);
+  pctx.strokeStyle="#99ccff"; pctx.lineWidth=1;
+  for(const path of paths){
+    if(path.length<2) continue;
+    // حساب اتجاه موضع للقطع المتوازي (نحسب عمودي متوسط)
+    for(let i=0;i<path.length-1;i+=2){
+      const p1 = path[i], p2 = path[Math.min(i+1, path.length-1)];
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.hypot(dx,dy) || 1;
+      const nx = -dy/len * (satinWidth/2), ny = dx/len * (satinWidth/2);
+      // نقطتان على الحافة اليسرى واليمنى
+      const a = {x: p1.x + nx, y: p1.y + ny};
+      const b = {x: p1.x - nx, y: p1.y - ny};
+      const c = {x: p2.x + nx, y: p2.y + ny};
+      const d = {x: p2.x - nx, y: p2.y - ny};
+      // zigzag بين (a->c) و (b->d)
+      newCommands.push({cmd:"JUMP", x:a.x, y:a.y});
+      newCommands.push({cmd:"STITCH", x:c.x, y:c.y});
+      newCommands.push({cmd:"JUMP", x:b.x, y:b.y});
+      newCommands.push({cmd:"STITCH", x:d.x, y:d.y});
+      // رسم توضيحي
+      pctx.beginPath(); pctx.moveTo(a.x,a.y); pctx.lineTo(c.x,c.y); pctx.moveTo(b.x,b.y); pctx.lineTo(d.x,d.y); pctx.stroke();
+    }
+  }
+  commands = newCommands;
+  stitchInfo.textContent = `تم توليد أوامر ساتان تقريبية: ${commands.length}`;
+});
+
+// تنزيل (PES أو PNG)
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const type = document.getElementById('fileType').value;
+  const fileName = (document.getElementById('fileName').value || 'stitch_pattern').replace(/\s+/g,'_');
+
+  if(type === 'png'){
+    // تحميل عرض المعاينة
+    const a = document.createElement('a');
+    a.href = preview.toDataURL('image/png');
+    a.download = `${fileName}.png`;
+    a.click();
+    return;
+  }
+
+  if(commands.length === 0){
+    alert("لا توجد أوامر غرز؛ استخدم تتبع أو ملء أو ساتان أولاً.");
+    return;
+  }
+
+  // أرسل كـ commands إلى السيرفر مع type مطلوب
+  stitchInfo.textContent = "جارٍ إنشاء الملف...";
+  fetch(SERVER_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({commands: commands, type: type})
+  })
+  .then(async res => {
+    if(!res.ok){
+      const err = await res.json().catch(()=>({error:'خطأ'}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return res.blob();
+  })
+  .then(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${fileName}.${type}`;
+    a.click();
+    if(type === 'des'){
+      alert("تم تحميل ملف مسمَّى .des لكنه بصيغة PES داخلياً. لتحويله إلى DES حقيقي استخدم Wilcom/Hatch/Embird.");
+    }
+    stitchInfo.textContent = "تم إنشاء الملف.";
+  })
+  .catch(err => {
+    console.error(err);
+    stitchInfo.textContent = "خطأ في إنشاء الملف: " + err.message;
+  });
+
 });
 </script>
 </body>
