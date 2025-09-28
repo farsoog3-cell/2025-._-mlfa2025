@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mlfa2025.91 - استخراج مخطط التطريز</title>
+<title>mlfa2025.91 - استخراج مخطط التطريز المتصل</title>
 <style>
     body {
         margin: 0;
@@ -43,12 +43,12 @@
 </header>
 
 <section>
-    <h2>رفع الصورة واستخراج المخطط</h2>
+    <h2>رفع الصورة واستخراج مخطط التطريز المتصل</h2>
     <input type="file" id="imageInput" accept="image/*">
     <br>
     <button id="bwBtn">أبيض وأسود</button>
     <button id="sketchBtn">رسم</button>
-    <button id="extractBtn">نسخ المخطط</button>
+    <button id="extractBtn">نسخ المخطط المتصل</button>
     <button id="downloadBtn">تنزيل المخطط</button>
     <br>
     <canvas id="canvas"></canvas>
@@ -84,7 +84,6 @@ imageInput.addEventListener('change', function() {
 
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         ctx.drawImage(img, 0, 0);
     };
     img.src = URL.createObjectURL(file);
@@ -119,46 +118,71 @@ sketchBtn.addEventListener('click', () => {
     ctx.putImageData(imageData, 0, 0);
 });
 
-// استخراج المخطط تلقائياً
+// استخراج المخطط المتصل
 extractBtn.addEventListener('click', () => {
     ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    // مسح المخطط السابق
     patternCtx.fillStyle = "#fff";
-    patternCtx.fillRect(0, 0, patternCanvas.width, patternCanvas.height);
+    patternCtx.fillRect(0, 0, width, height);
 
     patternCtx.strokeStyle = "#000";
     patternCtx.lineWidth = 1;
 
     const threshold = 120;
-    patternCtx.beginPath();
 
-    for (let y = 0; y < canvas.height; y+=2) {
-        let started = false;
-        for (let x = 0; x < canvas.width; x+=2) {
-            const i = (y*canvas.width + x)*4;
-            const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
-            if (gray < threshold) {
-                if(!started){
-                    patternCtx.moveTo(x, y);
-                    started = true;
-                } else {
-                    patternCtx.lineTo(x, y);
+    // خوارزمية بسيطة للربط المتصل: تمر عبر البكسلات السوداء وتسلسلها
+    let visited = Array(height).fill(0).map(()=>Array(width).fill(false));
+
+    function isBlack(x,y){
+        if(x<0 || x>=width || y<0 || y>=height) return false;
+        const i = (y*width + x)*4;
+        const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
+        return gray < threshold;
+    }
+
+    function dfs(x,y,ctx){
+        let stack = [{x,y}];
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        while(stack.length>0){
+            let p = stack.pop();
+            const px = p.x, py = p.y;
+            if(visited[py][px]) continue;
+            visited[py][px] = true;
+            ctx.lineTo(px,py);
+
+            // تحقق من 8 الاتجاهات
+            const dirs = [
+                {dx:-1,dy:0},{dx:1,dy:0},{dx:0,dy:-1},{dx:0,dy:1},
+                {dx:-1,dy:-1},{dx:1,dy:-1},{dx:-1,dy:1},{dx:1,dy:1}
+            ];
+            for(const d of dirs){
+                const nx = px+d.dx, ny=py+d.dy;
+                if(nx>=0 && nx<width && ny>=0 && ny<height && !visited[ny][nx] && isBlack(nx,ny)){
+                    stack.push({x:nx,y:ny});
                 }
-            } else {
-                started = false;
+            }
+        }
+        ctx.stroke();
+    }
+
+    for(let y=0;y<height;y++){
+        for(let x=0;x<width;x++){
+            if(!visited[y][x] && isBlack(x,y)){
+                dfs(x,y,patternCtx);
             }
         }
     }
-    patternCtx.stroke();
 });
 
 // تنزيل المخطط
 downloadBtn.addEventListener('click', () => {
     const link = document.createElement('a');
-    link.download = 'pattern.png';
+    link.download = 'pattern_connected.png';
     link.href = patternCanvas.toDataURL('image/png');
     link.click();
 });
