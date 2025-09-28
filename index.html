@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تحويل الصور إلى باترون تطريز</title>
+<title>تحويل الصورة إلى باترون تطريز</title>
 <style>
 body { font-family: Arial; text-align:center; background:#111; color:#fff; }
 canvas { border:1px solid #000; margin-top:20px; max-width:100%; }
@@ -28,7 +28,7 @@ button,input,select { padding:10px; margin:5px; border-radius:5px; }
 <div id="info"></div>
 
 <script>
-const SERVER_URL = "http://localhost:5000/generate_pes"; // خادم Python
+const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/generate_pes"; // رابط السيرفر
 const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -40,6 +40,7 @@ const info = document.getElementById('info');
 let img = new Image();
 let stitchPoints = [];
 
+// رفع الصورة
 imageInput.addEventListener('change', function(){
   const file = this.files[0];
   if(!file) return;
@@ -51,34 +52,36 @@ imageInput.addEventListener('change', function(){
   img.src = URL.createObjectURL(file);
 });
 
-// تحليل الصورة
+// تحليل الصورة واستخراج نقاط الغرز
 analyzeBtn.addEventListener('click', () => {
   if(!img.src){ alert("رفع الصورة أولاً"); return; }
   ctx.drawImage(img,0,0);
   const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
   const data = imageData.data;
   stitchPoints = [];
-  
-  // تحويل للرمادي + اكتشاف الحواف البسيط
+
   const threshold = 128;
-  for(let y=0; y<canvas.height; y+=3){
-    for(let x=0; x<canvas.width; x+=3){
+  const step = 3; // تقليل الخطوة لزيادة كثافة الغرز
+
+  for(let y=0; y<canvas.height; y+=step){
+    for(let x=0; x<canvas.width; x+=step){
       const i = (y*canvas.width + x)*4;
       const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
-      if(gray<threshold){
-        stitchPoints.push({x:x,y:y,type:'stitch'}); // كل نقطة غرزة
+      if(gray < threshold){
+        stitchPoints.push({x:x, y:y, type:'stitch'});
         ctx.fillStyle = "#0f0";
-        ctx.fillRect(x, y, 1,1); // رسم لمعاينة الغرز
+        ctx.fillRect(x,y,1,1); // معاينة الغرز
       }
     }
   }
   info.textContent = `عدد الغرز: ${stitchPoints.length}`;
 });
 
-// تنزيل الملف
+// تنزيل الملف PES
 downloadBtn.addEventListener('click', () => {
   if(stitchPoints.length===0){ alert("تحليل الصورة أولاً"); return; }
   const fileName = fileNameInput.value || 'stitch_pattern';
+
   fetch(SERVER_URL, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -90,9 +93,12 @@ downloadBtn.addEventListener('click', () => {
     link.href = URL.createObjectURL(blob);
     link.download = `${fileName}.pes`;
     link.click();
-    info.textContent = "تم إنشاء الملف بنجاح!";
+    info.textContent = "تم إنشاء الملف بنجاح! جاهز للاختبار في Embroidery Viewer";
   })
-  .catch(err=>{ console.error(err); info.textContent="خطأ أثناء إنشاء الملف"; });
+  .catch(err=>{
+    console.error(err);
+    info.textContent = "خطأ أثناء إنشاء الملف";
+  });
 });
 </script>
 
