@@ -3,139 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ML FA2025 - التطريز الواقعي</title>
-<style>
-body { font-family: 'Segoe UI', sans-serif; margin:0; padding:0; background:#f2f2f2; color:#000; }
-header { display:flex; justify-content: space-between; align-items:center; padding:15px 30px; background:#1a1a1a; }
-header .logo { font-size:28px; font-weight:bold; color:#00cfff; }
-header nav a { margin-left:20px; color:#fff; text-decoration:none; }
-header nav a:hover { color:#00cfff; }
-.section { max-width:1000px; margin:40px auto; padding:20px; background:#222; border-radius:12px; color:#fff; }
-button { background:#00cfff; color:#000; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; }
-#progressContainer { width:100%; height:20px; background:#444; border-radius:10px; margin-top:10px; }
-#progressBar { width:0%; height:100%; background:#00cfff; transition: width 0.3s; }
-.console { background:#000; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; font-family: monospace; }
-canvas { display:block; margin:20px auto; border:1px solid #444; border-radius:8px; background:#fff; max-width:100%; height:auto; }
-select { padding:8px; border-radius:6px; margin-left:10px; }
-</style>
+<title>رفع صورة وتحويلها لقالب تطريز</title>
 </head>
 <body>
-<header>
-    <div class="logo">ML FA2025</div>
-    <nav>
-        <a href="#upload">رفع الملف</a>
-        <a href="#preview">معاينة</a>
-    </nav>
-</header>
-
-<main>
-<section id="upload" class="section">
-    <h2>رفع صورة وتحويلها لقالب مطرز واقعي</h2>
-    <input type="file" id="imageUpload" accept="image/*">
-    <select id="fileType">
-        <option value="DST">DST</option>
-        <option value="DSE">DSE</option>
-    </select>
-    <button id="uploadBtn">رفع وتحويل</button>
-    <div id="progressContainer"><div id="progressBar"></div></div>
-</section>
-
-<section id="preview" class="section">
-    <h2>معاينة الغرز الواقعية</h2>
-    <div class="console"><pre id="consoleLog">جاهز لاستقبال الملفات...</pre></div>
-    <canvas id="canvas"></canvas>
-</section>
-</main>
+<h2>رفع صورة لتحويلها إلى DST/DSE</h2>
+<input type="file" id="imageUpload" accept="image/*">
+<select id="fileType">
+    <option value="DST">DST</option>
+    <option value="DSE">DSE</option>
+</select>
+<button id="uploadBtn">رفع وتحويل</button>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const progressBar = document.getElementById('progressBar');
-const consoleLog = document.getElementById('consoleLog');
-const fileTypeSelect = document.getElementById('fileType');
-
-let stitches = [];
-
-function drawStitches(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "#000";
-    for(let i=0;i<stitches.length;i++){
-        ctx.fillRect(stitches[i].x, stitches[i].y, 2, 2);
-    }
-    requestAnimationFrame(drawStitches);
-}
-
 document.getElementById('uploadBtn').addEventListener('click', async ()=>{
     const fileInput = document.getElementById('imageUpload');
     if(fileInput.files.length===0){ alert("اختر ملف أولاً"); return; }
     const file = fileInput.files[0];
-    const fileType = fileTypeSelect.value;
-    consoleLog.textContent += `\nتم اختيار الملف: ${file.name}, نوع الملف: ${fileType}`;
+    const fileType = document.getElementById('fileType').value;
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', fileType);
 
-    progressBar.style.width='0%';
-    consoleLog.textContent += `\nبدأ رفع الملف إلى السيرفر...`;
-
     try{
-        const response = await fetch('https://2025mlfa-2-7e2x.onrender.com/upload',{
+        const response = await fetch('http://localhost:5000/upload',{
             method:'POST',
             body:formData
         });
-
         if(!response.ok){
-            const errText = await response.text();
-            consoleLog.textContent += `\nخطأ: ${errText}`;
-            alert("خطأ أثناء التحويل: "+errText);
+            const text = await response.text();
+            alert("خطأ: "+text);
             return;
         }
-
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        // تنزيل الملف
-        if(confirm("تم الانتهاء! هل تريد تنزيل الملف؟")){
-            const a = document.createElement('a');
-            a.href=url;
-            a.download=`pattern.${fileType.toLowerCase()}`;
-            a.click();
-            consoleLog.textContent += `\nتم تنزيل الملف.`;
-        }
-
-        // إنشاء صورة محاكاة الغرز
-        const img = new Image();
-        img.onload=()=>{
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.clearRect(0,0,img.width,img.height);
-            ctx.drawImage(img,0,0);
-
-            // توليد الغرز للمعاينة
-            stitches = [];
-            const imageData = ctx.getImageData(0,0,img.width,img.height);
-            for(let y=0;y<img.height;y+=2){
-                for(let x=0;x<img.width;x+=2){
-                    const i = (y*img.width+x)*4;
-                    const r=imageData.data[i], g=imageData.data[i+1], b=imageData.data[i+2];
-                    const gray=(r+g+b)/3;
-                    if(gray<128) stitches.push({x:x,y:y});
-                }
-            }
-            drawStitches();
-            consoleLog.textContent += `\nتم عرض المعاينة الواقعية للغرز.`;
-        };
-
-        const reader = new FileReader();
-        reader.onload = e=>{ img.src=e.target.result; }
-        reader.readAsDataURL(file);
-
-        progressBar.style.width='100%';
-
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download=`pattern.${fileType.toLowerCase()}`;
+        a.click();
+        alert("تم إنشاء الملف بنجاح!");
     }catch(err){
-        consoleLog.textContent += `\nخطأ في الاتصال بالسيرفر: ${err}`;
-        alert("خطأ في الاتصال بالسيرفر");
+        alert("خطأ في الاتصال بالسيرفر: "+err);
     }
 });
 </script>
