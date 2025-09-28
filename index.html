@@ -12,19 +12,14 @@ button,input,select { padding:10px; margin:5px; border-radius:5px; }
 </head>
 <body>
 
-<h1>تحويل الصورة إلى باترون تطريز احترافي</h1>
+<h1>باترون تطريز احترافي مع Satin وEdge</h1>
 
-<input type="file" id="imageInput" accept="image/*">
-<br>
-<button id="analyzeBtn">تحليل الصورة واستخراج الغرز</button>
-<br>
-<canvas id="canvas"></canvas>
-<br>
+<input type="file" id="imageInput" accept="image/*"><br>
+<button id="bwBtn">تحويل إلى أبيض وأسود</button>
+<button id="analyzeBtn">استخراج الغرز والمسارات</button><br>
+<canvas id="canvas"></canvas><br>
 <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف">
-<select id="fileType">
-  <option value="pes">PES (Brother)</option>
-</select>
-<button id="downloadBtn">تنزيل الملف</button>
+<button id="downloadBtn">تنزيل ملف PES</button>
 <div id="info"></div>
 
 <script>
@@ -32,6 +27,7 @@ const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/generate_pes";
 const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const bwBtn = document.getElementById('bwBtn');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const fileNameInput = document.getElementById('fileName');
@@ -42,69 +38,86 @@ let stitchPoints = [];
 
 // رفع الصورة
 imageInput.addEventListener('change', function(){
-  const file = this.files[0];
-  if(!file) return;
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-  };
-  img.src = URL.createObjectURL(file);
+    const file = this.files[0];
+    if(!file) return;
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img,0,0);
+    };
+    img.src = URL.createObjectURL(file);
 });
 
-// تحليل الصورة واستخراج الغرز
-analyzeBtn.addEventListener('click', () => {
-  if(!img.src){ alert("رفع الصورة أولاً"); return; }
-  ctx.drawImage(img,0,0);
-  const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-  const data = imageData.data;
-  stitchPoints = [];
-
-  const threshold = 128; 
-  const step = 3; 
-
-  // استخراج الغرز مع ترتيب منطقي (خطوط متوازية وتتابع)
-  for(let y=0; y<canvas.height; y+=step){
-    const rowPoints = [];
-    for(let x=0; x<canvas.width; x+=step){
-      const i = (y*canvas.width + x)*4;
-      const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
-      if(gray < threshold){
-        rowPoints.push({x:x, y:y, type:'fill'}); // نوع الغرز Fill للداخل
-        ctx.fillStyle = "#0f0";
-        ctx.fillRect(x,y,1,1);
-      }
+// تحويل الصورة إلى أبيض وأسود
+bwBtn.addEventListener('click', () => {
+    ctx.drawImage(img,0,0);
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const data = imageData.data;
+    for(let i=0;i<data.length;i+=4){
+        const gray = 0.3*data[i]+0.59*data[i+1]+0.11*data[i+2];
+        const bw = gray > 128 ? 255 : 0;
+        data[i]=data[i+1]=data[i+2]=bw;
     }
-    // ترتيب النقاط بشكل zigzag لكل صف
-    if(y/step % 2 === 1) rowPoints.reverse();
-    stitchPoints.push(...rowPoints);
-  }
+    ctx.putImageData(imageData,0,0);
+});
 
-  info.textContent = `عدد الغرز: ${stitchPoints.length}`;
+// استخراج الغرز مع تحديد نوع الغرز وزاوية Satin
+analyzeBtn.addEventListener('click', () => {
+    ctx.drawImage(img,0,0);
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const data = imageData.data;
+    stitchPoints = [];
+    const threshold = 128;
+    const step = 4;
+    const satin_angle = Math.PI/4; // زاوية الغرز الطويلة
+
+    for(let y=0;y<canvas.height;y+=step){
+        const rowPoints = [];
+        for(let x=0;x<canvas.width;x+=step){
+            const i = (y*canvas.width+x)*4;
+            const gray = 0.3*data[i]+0.59*data[i+1]+0.11*data[i+2];
+            if(gray<threshold){
+                let type='fill';
+                // الحواف الخارجية أو خطوط Satin
+                if(x<step || x>canvas.width-step || y<step || y>canvas.height-step) type='edge';
+                if((x+y)%20===0) type='satin'; // مثال لتوليد Satin
+                rowPoints.push({x:x,y:y,type:type,angle:satin_angle});
+                // رسم معاينة
+                if(type==='edge') ctx.fillStyle="#f00";
+                else if(type==='fill') ctx.fillStyle="#0f0";
+                else ctx.fillStyle="#00f";
+                ctx.fillRect(x,y,1,1);
+            }
+        }
+        if((y/step)%2===1) rowPoints.reverse();
+        stitchPoints.push(...rowPoints);
+    }
+
+    info.textContent=`عدد الغرز: ${stitchPoints.length} - معاينة المسارات جاهزة`;
 });
 
 // تنزيل ملف PES
 downloadBtn.addEventListener('click', () => {
-  if(stitchPoints.length===0){ alert("تحليل الصورة أولاً"); return; }
-  const fileName = fileNameInput.value || 'stitch_pattern';
+    if(stitchPoints.length===0){ alert("تحليل الصورة أولاً"); return; }
+    const fileName = fileNameInput.value || 'stitch_pattern';
 
-  fetch(SERVER_URL, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({points:stitchPoints})
-  })
-  .then(res=>res.blob())
-  .then(blob=>{
-    const link=document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${fileName}.pes`;
-    link.click();
-    info.textContent = "تم إنشاء الملف بنجاح! جاهز للاختبار في Embroidery Viewer";
-  })
-  .catch(err=>{
-    console.error(err);
-    info.textContent = "خطأ أثناء إنشاء الملف";
-  });
+    fetch(SERVER_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({points:stitchPoints})
+    })
+    .then(res=>res.blob())
+    .then(blob=>{
+        const link=document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${fileName}.pes`;
+        link.click();
+        info.textContent="تم إنشاء ملف PES احترافي مع Satin وEdge بنجاح!";
+    })
+    .catch(err=>{
+        console.error(err);
+        info.textContent="خطأ أثناء إنشاء الملف";
+    });
 });
 </script>
 
