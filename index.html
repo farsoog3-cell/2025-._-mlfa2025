@@ -6,21 +6,76 @@
 <title>mlfa2025.91 - باترونات التطريز</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #000; color: #fff; text-align: center; }
-    header { padding: 20px; background: #111; border-bottom: 2px solid #fff; }
-    section { margin: 40px auto; max-width: 900px; background: #111; padding: 20px; border-radius: 10px; }
-    .buttons-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 20px; }
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #000;
+        color: #fff;
+        text-align: center;
+    }
+    header {
+        padding: 20px;
+        background-color: #111;
+        border-bottom: 2px solid #fff;
+    }
+    section {
+        margin: 40px auto;
+        max-width: 900px;
+        background-color: #111;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    .buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
     .buttons-container button, input[type="file"], input[type="text"], select {
-        padding: 10px 15px; font-size: 1em; cursor: pointer; border: none; border-radius: 5px; transition: 0.2s;
+        padding: 10px 15px;
+        font-size: 1em;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        transition: 0.2s;
     }
-    .buttons-container button { background: #222; color: #fff; display: flex; align-items: center; gap: 5px; }
-    .buttons-container button:hover { background: #444; }
-    canvas { margin-top: 20px; border: 1px solid #000; max-width: 100%; }
-    label { margin: 0 10px; }
-    input[type="text"], select {
-        border-radius: 5px; border: 1px solid #fff; background: #111; color: #fff;
+    .buttons-container button {
+        background-color: #222;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 5px;
     }
-    #stitchInfo { margin-top: 10px; font-size: 1.1em; color: #0f0; }
+    .buttons-container button:hover {
+        background-color: #444;
+    }
+    canvas {
+        margin-top: 20px;
+        border: 1px solid #000;
+        max-width: 100%;
+    }
+    label {
+        margin: 0 10px;
+    }
+    input[type="text"] {
+        width: 150px;
+        border-radius: 5px;
+        border: 1px solid #fff;
+        background-color: #111;
+        color: #fff;
+    }
+    select {
+        border-radius: 5px;
+        border: 1px solid #fff;
+        background-color: #111;
+        color: #fff;
+    }
+    #stitchInfo {
+        margin-top: 10px;
+        font-size: 1.1em;
+        color: #0f0;
+    }
 </style>
 </head>
 <body>
@@ -54,7 +109,7 @@
 </section>
 
 <script>
-const SERVER_URL = "http://localhost:5000/generate_pes"; // غيّر إذا رفعت السيرفر أونلاين
+const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/generate_pes";
 
 const imageInput = document.getElementById('imageInput');
 const canvas = document.getElementById('canvas');
@@ -103,6 +158,8 @@ bwBtn.addEventListener('click', () => {
         const bw = gray > 128 ? 255 : 0;
         data[i] = data[i+1] = data[i+2] = bw;
     }
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.putImageData(imageData, 0, 0);
 });
 
@@ -115,6 +172,8 @@ sketchBtn.addEventListener('click', () => {
         const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
         data[i] = data[i+1] = data[i+2] = 255 - gray;
     }
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.putImageData(imageData, 0, 0);
 });
 
@@ -128,6 +187,7 @@ extractBtn.addEventListener('click', () => {
 
     patternCtx.fillStyle = "#fff";
     patternCtx.fillRect(0, 0, width, height);
+
     patternCtx.strokeStyle = "#000";
     patternCtx.lineWidth = 1;
 
@@ -135,15 +195,20 @@ extractBtn.addEventListener('click', () => {
 
     const threshold = 120;
     const step = 6;
+    const angle = Math.PI / 4;
 
     for(let y=0; y<height; y+=step){
         for(let x=0; x<width; x+=step){
             const i = (y*width + x)*4;
             const gray = 0.3*data[i] + 0.59*data[i+1] + 0.11*data[i+2];
             if(gray < threshold){
+                const len = step;
+                const x2 = x + len * Math.cos(angle);
+                const y2 = y + len * Math.sin(angle);
                 patternCtx.beginPath();
-                patternCtx.arc(x, y, 1, 0, 2*Math.PI);
-                patternCtx.fill();
+                patternCtx.moveTo(x, y);
+                patternCtx.lineTo(x2, y2);
+                patternCtx.stroke();
                 stitchPoints.push({x:x, y:y});
             }
         }
