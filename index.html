@@ -27,13 +27,15 @@
             border-radius: 10px;
         }
 
-        input[type="file"] {
+        input[type="file"], button {
             margin: 20px 0;
+            padding: 10px 20px;
+            font-size: 1em;
         }
 
         canvas {
             margin-top: 20px;
-            border: 1px solid #fff;
+            border: 1px solid #000;
             max-width: 100%;
         }
     </style>
@@ -44,8 +46,11 @@
     </header>
 
     <section>
-        <h2>رفع الصورة وتحويلها إلى أبيض وأسود مع إزالة الخلفية</h2>
+        <h2>رفع الصورة وتحويلها إلى أبيض وأسود</h2>
         <input type="file" id="imageInput" accept="image/*">
+        <br>
+        <button id="downloadBtn">تنزيل الصورة</button>
+        <br>
         <canvas id="canvas"></canvas>
     </section>
 
@@ -53,6 +58,7 @@
         const imageInput = document.getElementById('imageInput');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const downloadBtn = document.getElementById('downloadBtn');
 
         imageInput.addEventListener('change', function() {
             const file = this.files[0];
@@ -60,14 +66,17 @@
 
             const img = new Image();
             img.onload = () => {
-                // ضبط أبعاد الكانفاس
                 canvas.width = img.width;
                 canvas.height = img.height;
 
-                // رسم الصورة على الكانفاس
+                // رسم خلفية بيضاء
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // رسم الصورة فوق الخلفية
                 ctx.drawImage(img, 0, 0);
 
-                // الحصول على بيانات الصورة
+                // تحويل الصورة إلى أبيض وأسود
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imageData.data;
 
@@ -76,22 +85,24 @@
                     const g = data[i + 1];
                     const b = data[i + 2];
 
-                    // تحويل إلى تدرج الرمادي
+                    // متوسط التدرج الرمادي
                     const gray = 0.3 * r + 0.59 * g + 0.11 * b;
 
-                    // إزالة الخلفية البيضاء تقريبًا
-                    if (r > 200 && g > 200 && b > 200) {
-                        data[i + 3] = 0; // شفافية
-                    } else {
-                        data[i] = data[i + 1] = data[i + 2] = gray;
-                        data[i + 3] = 255; // عدم الشفافية
-                    }
+                    // إذا فاتح أكثر من منتصف الأبيض اجعله أبيض، وإلا اجعله أسود
+                    const bw = gray > 128 ? 255 : 0;
+                    data[i] = data[i + 1] = data[i + 2] = bw;
                 }
 
-                // تحديث الكانفاس
                 ctx.putImageData(imageData, 0, 0);
             };
             img.src = URL.createObjectURL(file);
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'converted_image.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
     </script>
 </body>
