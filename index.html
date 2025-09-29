@@ -89,7 +89,7 @@ downloadBtn.addEventListener('click',()=>{
 
         const colorsHeader = res.headers.get('X-Colors-Info');
         let colors = [];
-        try{ colors = JSON.parse(colorsHeader.replace(/'/g,'"')); }catch(e){ logConsole("⚠️ خطأ في قراءة ألوان الغرز من الهيدر: "+e); }
+        try{ colors = JSON.parse(colorsHeader); }catch(e){ logConsole("⚠️ خطأ في قراءة ألوان الغرز من الهيدر: "+e); }
         updateColors(colors);
         drawPreview(colors);
 
