@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI تحويل الصورة إلى تطريز</title>
+<title>AI تحويل الصورة إلى تطريز DST</title>
 <style>
 body {background:#000;color:#fff;font-family:Arial,sans-serif;text-align:center;}
 section{max-width:900px;margin:30px auto;padding:20px;background:#111;border-radius:10px;}
@@ -17,11 +17,11 @@ button:hover{background:#444;}
 </head>
 <body>
 <section>
-<h1>AI تحويل الصورة إلى تطريز</h1>
+<h1>AI تحويل الصورة إلى تطريز DST</h1>
 
 <input type="file" id="imageInput" accept="image/*"><br>
 <input type="text" id="fileName" placeholder="اسم الملف"><br>
-<button id="downloadBtn">تنزيل ملف PES</button>
+<button id="downloadBtn">تنزيل ملف DST</button>
 
 <div id="status"></div>
 
@@ -39,7 +39,7 @@ button:hover{background:#444;}
 </section>
 
 <script>
-const SERVER_URL="https://2025mlfa-2-7e2x.onrender.com/generate_pes_from_image";
+const SERVER_URL="https://2025mlfa-2-7e2x.onrender.com/generate_dst_from_image";
 
 const imageInput=document.getElementById('imageInput');
 const fileNameInput=document.getElementById('fileName');
@@ -78,7 +78,7 @@ downloadBtn.addEventListener('click',()=>{
     formData.append("image",imageFile);
 
     const fileName=fileNameInput.value || "ai_stitch";
-    status.textContent="جارٍ إنشاء ملف PES...";
+    status.textContent="جارٍ إنشاء ملف DST...";
     logConsole("🚀 بدأ إرسال الصورة إلى السيرفر...");
     const startTime = Date.now();
 
@@ -104,11 +104,11 @@ downloadBtn.addEventListener('click',()=>{
 
         const link=document.createElement('a');
         link.href=URL.createObjectURL(blob);
-        link.download=fileName+".pes";
+        link.download=fileName+".dst";
         link.click();
 
-        status.textContent="تم إنشاء ملف PES بنجاح!";
-        logConsole("🎉 تم تنزيل ملف PES باسم: " + fileName+".pes");
+        status.textContent="تم إنشاء ملف DST بنجاح!";
+        logConsole("🎉 تم تنزيل ملف DST باسم: " + fileName+".dst");
 
         const colors = Array.from(colorsPanel.children).map((div,index)=>({
             hex:div.style.backgroundColor,
@@ -119,7 +119,7 @@ downloadBtn.addEventListener('click',()=>{
     })
     .catch(err=>{
         console.error(err);
-        status.textContent="حدث خطأ أثناء إنشاء ملف PES.";
+        status.textContent="حدث خطأ أثناء إنشاء ملف DST.";
         logConsole("❌ خطأ: " + err);
     });
 });
