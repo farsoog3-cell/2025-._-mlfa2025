@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>باترون تطريز متكامل</title>
+<title>باترون تطريز متكامل تلقائي</title>
 <style>
 body { font-family: Arial; text-align:center; background:#111; color:#fff; }
-.tabs { display:flex; justify-content:center; gap:10px; margin-bottom:10px; }
+.tabs { display:flex; justify-content:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
 .tab { padding:10px 20px; cursor:pointer; background:#222; border-radius:5px; }
 .tab.active { background:#444; }
 .tab-content { display:none; margin-top:10px; }
@@ -17,35 +17,33 @@ button,input { padding:10px; margin:5px; border-radius:5px; }
 </head>
 <body>
 
-<h1>باترون تطريز متكامل</h1>
+<h1>باترون تطريز متكامل تلقائي</h1>
 
 <div class="tabs">
     <div class="tab active" data-tab="upload">رفع الصورة</div>
-    <div class="tab" data-tab="process">معالجة الصورة</div>
+    <div class="tab" data-tab="processed">الصورة المعالجة</div>
     <div class="tab" data-tab="stitch">مسارات الغرز</div>
     <div class="tab" data-tab="download">تنزيل PES</div>
 </div>
 
-<!-- رفع الصورة -->
+<!-- تبويب رفع الصورة -->
 <div class="tab-content active" id="upload">
     <input type="file" id="imageInput" accept="image/*"><br>
-    <button id="loadBtn">تحميل الصورة</button><br>
     <canvas id="canvasOriginal"></canvas>
 </div>
 
-<!-- معالجة الصورة -->
-<div class="tab-content" id="process">
-    <button id="processBtn">تحويل إلى أبيض وأسود وإزالة الخلفية</button><br>
+<!-- تبويب الصورة المعالجة -->
+<div class="tab-content" id="processed">
     <canvas id="canvasProcessed"></canvas>
 </div>
 
-<!-- معاينة مسارات الغرز -->
+<!-- تبويب مسارات الغرز -->
 <div class="tab-content" id="stitch">
     <canvas id="canvasStitch"></canvas><br>
     <div id="stitchInfo"></div>
 </div>
 
-<!-- تنزيل ملف PES -->
+<!-- تبويب تنزيل PES -->
 <div class="tab-content" id="download">
     <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف"><br>
     <button id="downloadBtn">تنزيل ملف PES</button>
@@ -55,10 +53,11 @@ button,input { padding:10px; margin:5px; border-radius:5px; }
 <script>
 const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/process_image";
 
+// التبويبات
 const tabs = document.querySelectorAll('.tab');
 const contents = document.querySelectorAll('.tab-content');
 tabs.forEach(tab=>{
-    tab.addEventListener('click',()=>{
+    tab.addEventListener('click', ()=>{
         tabs.forEach(t=>t.classList.remove('active'));
         contents.forEach(c=>c.classList.remove('active'));
         tab.classList.add('active');
@@ -66,36 +65,31 @@ tabs.forEach(tab=>{
     });
 });
 
-// Canvas و Elements
+// عناصر الصفحة
 const imageInput = document.getElementById('imageInput');
-const loadBtn = document.getElementById('loadBtn');
-const processBtn = document.getElementById('processBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-
 const canvasOriginal = document.getElementById('canvasOriginal');
 const ctxOriginal = canvasOriginal.getContext('2d');
-
 const canvasProcessed = document.getElementById('canvasProcessed');
 const ctxProcessed = canvasProcessed.getContext('2d');
-
 const canvasStitch = document.getElementById('canvasStitch');
 const ctxStitch = canvasStitch.getContext('2d');
-
 const fileNameInput = document.getElementById('fileName');
 const stitchInfo = document.getElementById('stitchInfo');
 const downloadInfo = document.getElementById('downloadInfo');
+const downloadBtn = document.getElementById('downloadBtn');
 
-let stitchPoints = [];
 let pesBlob = null;
 let uploadedFile = null;
 
-// رفع وعرض الصورة الأصلية
-loadBtn.addEventListener('click', ()=>{
+// رفع الصورة ومعالجة تلقائية
+imageInput.addEventListener('change', ()=>{
     const file = imageInput.files[0];
-    if(!file){ alert("اختر صورة"); return; }
+    if(!file) return;
     uploadedFile = file;
+
+    // عرض الصورة الأصلية فورًا
     const reader = new FileReader();
-    reader.onload = function(e){
+    reader.onload = e=>{
         const img = new Image();
         img.onload = ()=>{
             canvasOriginal.width = img.width;
@@ -105,19 +99,15 @@ loadBtn.addEventListener('click', ()=>{
         img.src = e.target.result;
     }
     reader.readAsDataURL(file);
-});
 
-// إرسال الصورة للسيرفر لمعالجتها
-processBtn.addEventListener('click', ()=>{
-    if(!uploadedFile){ alert("اختر صورة أولاً"); return; }
+    // إرسال الصورة للسيرفر تلقائيًا
     const formData = new FormData();
-    formData.append('image', uploadedFile);
-
-    stitchInfo.textContent="جاري معالجة الصورة...";
-    fetch(SERVER_URL,{ method:'POST', body:formData })
+    formData.append('image', file);
+    stitchInfo.textContent="جاري المعالجة تلقائيًا...";
+    fetch(SERVER_URL, {method:'POST', body:formData})
     .then(res=>res.json())
     .then(data=>{
-        // عرض الصور
+        // عرض الصورة المعالجة
         const imgProcessed = new Image();
         imgProcessed.onload = ()=>{
             canvasProcessed.width = imgProcessed.width;
@@ -127,20 +117,20 @@ processBtn.addEventListener('click', ()=>{
         imgProcessed.src = data.processed;
 
         // رسم مسارات الغرز
-        stitchPoints = data.stitchPoints;
+        const points = data.stitchPoints;
         canvasStitch.width = canvasProcessed.width;
         canvasStitch.height = canvasProcessed.height;
-        ctxStitch.fillStyle = "#000";
+        ctxStitch.fillStyle="#000";
         ctxStitch.fillRect(0,0,canvasStitch.width,canvasStitch.height);
-        ctxStitch.fillStyle = "#0f0";
-        stitchPoints.forEach(pt=>{
+        ctxStitch.fillStyle="#0f0";
+        points.forEach(pt=>{
             ctxStitch.fillRect(pt.x, pt.y, 1, 1);
         });
 
         // حفظ ملف PES
-        fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob = b; });
-
-        stitchInfo.textContent=`تم إنشاء المسارات. عدد الغرز: ${stitchPoints.length}`;
+        fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob=b; });
+        stitchInfo.textContent=`تم المعالجة تلقائيًا. عدد الغرز: ${points.length}`;
+        downloadInfo.textContent="";
     })
     .catch(err=>{
         console.error(err);
@@ -148,9 +138,9 @@ processBtn.addEventListener('click', ()=>{
     });
 });
 
-// تنزيل ملف PES
+// تنزيل PES
 downloadBtn.addEventListener('click', ()=>{
-    if(!pesBlob){ alert("يجب معالجة الصورة أولاً"); return; }
+    if(!pesBlob){ alert("الملف لم يُجهز بعد، انتظر قليلاً"); return; }
     const link = document.createElement('a');
     link.href = URL.createObjectURL(pesBlob);
     link.download = (fileNameInput.value||'stitch_pattern')+'.pes';
