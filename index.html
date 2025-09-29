@@ -27,6 +27,11 @@ button:hover{background:#444;}
     margin:2px;
     border:1px solid #fff;
 }
+#previewCanvas{
+    border:1px solid #fff;
+    margin-top:20px;
+    max-width:100%;
+}
 </style>
 </head>
 <body>
@@ -47,10 +52,12 @@ button:hover{background:#444;}
 
 <h3>الألوان والغرز</h3>
 <div id="colorsPanel"></div>
+
+<h3>معاينة الغرز</h3>
+<canvas id="previewCanvas"></canvas>
 </section>
 
 <script>
-// الرابط الداخلي للسيرفر
 const SERVER_URL="https://2025mlfa-2-7e2x.onrender.com/generate_pes_from_image";
 
 const imageInput=document.getElementById('imageInput');
@@ -60,6 +67,8 @@ const status=document.getElementById('status');
 const consolePanel=document.getElementById('consolePanel');
 const statsPanel=document.getElementById('statsPanel');
 const colorsPanel=document.getElementById('colorsPanel');
+const previewCanvas=document.getElementById('previewCanvas');
+const previewCtx=previewCanvas.getContext('2d');
 
 function logConsole(msg){
     consolePanel.innerHTML += msg + "<br>";
@@ -81,6 +90,25 @@ function updateColors(colors){
         div.style.backgroundColor=c.hex;
         div.title="غرز: "+c.stitches+" - اللون: "+c.hex;
         colorsPanel.appendChild(div);
+    });
+}
+
+function drawPreview(colors){
+    if(!colors.length) return;
+    // ضبط حجم الكانفس على الصورة الأصلية
+    previewCanvas.width = 500;
+    previewCanvas.height = 500;
+    previewCtx.fillStyle="#fff";
+    previewCtx.fillRect(0,0,previewCanvas.width,previewCanvas.height);
+
+    colors.forEach((c,idx)=>{
+        previewCtx.fillStyle=c.hex;
+        const step=Math.max(1, Math.floor(500/Math.sqrt(c.stitches)));
+        for(let i=0;i<Math.sqrt(c.stitches);i++){
+            for(let j=0;j<Math.sqrt(c.stitches);j++){
+                previewCtx.fillRect(i*step,j*step,1,1);
+            }
+        }
     });
 }
 
@@ -108,7 +136,6 @@ downloadBtn.addEventListener('click',()=>{
             throw new Error("استجابة السيرفر غير ناجحة: "+text);
         }
 
-        // قراءة ألوان الغرز من الهيدر
         const colorsHeader = res.headers.get('X-Colors-Info');
         let colors = [];
         try{
@@ -117,6 +144,7 @@ downloadBtn.addEventListener('click',()=>{
             logConsole("⚠️ خطأ في قراءة ألوان الغرز من الهيدر: "+e);
         }
         updateColors(colors);
+        drawPreview(colors);
 
         const totalStitches = colors.reduce((a,b)=>a+b.stitches,0);
         updateStats({
