@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI تطريز متقدم</title>
+<title>AI تحويل الصورة إلى تطريز</title>
 <style>
 body {background:#000;color:#fff;font-family:Arial,sans-serif;text-align:center;}
 section{max-width:800px;margin:30px auto;padding:20px;background:#111;border-radius:10px;}
@@ -14,10 +14,9 @@ button:hover{background:#444;}
 </head>
 <body>
 <section>
-<h1>AI تطريز متقدم</h1>
+<h1>AI تحويل الصورة إلى تطريز</h1>
 
 <input type="file" id="imageInput" accept="image/*"><br>
-<input type="file" id="samplePesInput" accept=".pes"><br>
 <input type="text" id="fileName" placeholder="اسم الملف"><br>
 <button id="downloadBtn">تنزيل ملف PES</button>
 
@@ -25,23 +24,20 @@ button:hover{background:#444;}
 </section>
 
 <script>
-const SERVER_URL="https://2025mlfa-2-7e2x.onrender.com/convert_image_with_ai_advanced";
+const SERVER_URL="http://localhost:5000/generate_pes_from_image";
 const imageInput=document.getElementById('imageInput');
-const samplePesInput=document.getElementById('samplePesInput');
 const fileNameInput=document.getElementById('fileName');
 const downloadBtn=document.getElementById('downloadBtn');
 const status=document.getElementById('status');
 
 downloadBtn.addEventListener('click',()=>{
     const imageFile=imageInput.files[0];
-    const pesFile=samplePesInput.files[0];
-    if(!imageFile || !pesFile){alert("يرجى رفع الصورة وملف PES المثال"); return;}
+    if(!imageFile){alert("يرجى رفع الصورة"); return;}
 
     const formData=new FormData();
     formData.append("image",imageFile);
-    formData.append("sample_pes",pesFile);
 
-    const fileName=fileNameInput.value || "ai_stitch_advanced";
+    const fileName=fileNameInput.value || "ai_stitch";
     status.textContent="جارٍ إنشاء ملف PES...";
 
     fetch(SERVER_URL,{method:"POST",body:formData})
