@@ -1,86 +1,163 @@
-# server.py
-from flask import Flask, request, jsonify, send_file, url_for
-from pyembroidery import EmbPattern, STITCH, write_pes
-from PIL import Image, ImageOps
-import io, os, math, uuid, base64
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>باترون تطريز متكامل</title>
+<style>
+body { font-family: Arial; text-align:center; background:#111; color:#fff; }
+.tabs { display:flex; justify-content:center; gap:10px; margin-bottom:10px; }
+.tab { padding:10px 20px; cursor:pointer; background:#222; border-radius:5px; }
+.tab.active { background:#444; }
+.tab-content { display:none; margin-top:10px; }
+.tab-content.active { display:block; }
+canvas { border:1px solid #000; margin:10px auto; max-width:90%; }
+button,input { padding:10px; margin:5px; border-radius:5px; }
+</style>
+</head>
+<body>
 
-app = Flask(__name__)
-UPLOAD_FOLDER = "/tmp"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+<h1>باترون تطريز متكامل</h1>
 
-def remove_background(img):
-    img = img.convert("RGBA")
-    datas = img.getdata()
-    newData = []
-    for item in datas:
-        if item[0]>200 and item[1]>200 and item[2]>200:
-            newData.append((255,255,255,0))
-        else:
-            newData.append(item)
-    img.putdata(newData)
-    return img
+<div class="tabs">
+    <div class="tab active" data-tab="upload">رفع الصورة</div>
+    <div class="tab" data-tab="process">معالجة الصورة</div>
+    <div class="tab" data-tab="stitch">مسارات الغرز</div>
+    <div class="tab" data-tab="download">تنزيل PES</div>
+</div>
 
-@app.route("/process_image", methods=["POST"])
-def process_image():
-    if 'image' not in request.files:
-        return "لا توجد صورة!", 400
-    file = request.files['image']
-    img = Image.open(file)
+<!-- رفع الصورة -->
+<div class="tab-content active" id="upload">
+    <input type="file" id="imageInput" accept="image/*"><br>
+    <button id="loadBtn">تحميل الصورة</button><br>
+    <canvas id="canvasOriginal"></canvas>
+</div>
 
-    # حفظ الصورة الأصلية
-    original_io = io.BytesIO()
-    img.save(original_io, format='PNG')
-    original_io.seek(0)
-    original_data = "data:image/png;base64," + base64.b64encode(original_io.getvalue()).decode()
+<!-- معالجة الصورة -->
+<div class="tab-content" id="process">
+    <button id="processBtn">تحويل إلى أبيض وأسود وإزالة الخلفية</button><br>
+    <canvas id="canvasProcessed"></canvas>
+</div>
 
-    # إزالة الخلفية
-    img_no_bg = remove_background(img)
+<!-- معاينة مسارات الغرز -->
+<div class="tab-content" id="stitch">
+    <canvas id="canvasStitch"></canvas><br>
+    <div id="stitchInfo"></div>
+</div>
 
-    # تحويل أبيض وأسود
-    bw = img_no_bg.convert("L")  # Grayscale
+<!-- تنزيل ملف PES -->
+<div class="tab-content" id="download">
+    <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف"><br>
+    <button id="downloadBtn">تنزيل ملف PES</button>
+    <div id="downloadInfo"></div>
+</div>
 
-    processed_io = io.BytesIO()
-    bw.save(processed_io, format='PNG')
-    processed_io.seek(0)
-    processed_data = "data:image/png;base64," + base64.b64encode(processed_io.getvalue()).decode()
+<script>
+const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/process_image";
 
-    # تحليل الغرز zig-zag
-    stitchPoints=[]
-    step=4
-    width,height = bw.size
-    for y in range(0,height,step):
-        rowPoints=[]
-        for x in range(0,width,step):
-            gray = bw.getpixel((x,y))
-            if gray<128:
-                rowPoints.append({'x':x,'y':y,'type':'fill'})
-        if (y//step)%2==1: rowPoints.reverse()
-        stitchPoints.extend(rowPoints)
+const tabs = document.querySelectorAll('.tab');
+const contents = document.querySelectorAll('.tab-content');
+tabs.forEach(tab=>{
+    tab.addEventListener('click',()=>{
+        tabs.forEach(t=>t.classList.remove('active'));
+        contents.forEach(c=>c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
 
-    # إنشاء ملف PES
-    pattern = EmbPattern()
-    last_point=None
-    for pt in stitchPoints:
-        x,y = pt['x'], pt['y']
-        if last_point:
-            distance = math.hypot(x-last_point[0], y-last_point[1])
-            if distance>20: pattern.add_jump_absolute(x,y)
-        pattern.add_stitch_absolute(x,y)
-        last_point=(x,y)
-    pattern.end()
-    pes_filename = os.path.join(UPLOAD_FOLDER,str(uuid.uuid4())+".pes")
-    write_pes(pattern,pes_filename)
+// Canvas و Elements
+const imageInput = document.getElementById('imageInput');
+const loadBtn = document.getElementById('loadBtn');
+const processBtn = document.getElementById('processBtn');
+const downloadBtn = document.getElementById('downloadBtn');
 
-    return jsonify({
-        'original': original_data,
-        'processed': processed_data,
-        'stitchPoints': stitchPoints,
-        'pes': url_for('get_file', filename=os.path.basename(pes_filename))
+const canvasOriginal = document.getElementById('canvasOriginal');
+const ctxOriginal = canvasOriginal.getContext('2d');
+
+const canvasProcessed = document.getElementById('canvasProcessed');
+const ctxProcessed = canvasProcessed.getContext('2d');
+
+const canvasStitch = document.getElementById('canvasStitch');
+const ctxStitch = canvasStitch.getContext('2d');
+
+const fileNameInput = document.getElementById('fileName');
+const stitchInfo = document.getElementById('stitchInfo');
+const downloadInfo = document.getElementById('downloadInfo');
+
+let stitchPoints = [];
+let pesBlob = null;
+let uploadedFile = null;
+
+// رفع وعرض الصورة الأصلية
+loadBtn.addEventListener('click', ()=>{
+    const file = imageInput.files[0];
+    if(!file){ alert("اختر صورة"); return; }
+    uploadedFile = file;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const img = new Image();
+        img.onload = ()=>{
+            canvasOriginal.width = img.width;
+            canvasOriginal.height = img.height;
+            ctxOriginal.drawImage(img,0,0);
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+});
+
+// إرسال الصورة للسيرفر لمعالجتها
+processBtn.addEventListener('click', ()=>{
+    if(!uploadedFile){ alert("اختر صورة أولاً"); return; }
+    const formData = new FormData();
+    formData.append('image', uploadedFile);
+
+    stitchInfo.textContent="جاري معالجة الصورة...";
+    fetch(SERVER_URL,{ method:'POST', body:formData })
+    .then(res=>res.json())
+    .then(data=>{
+        // عرض الصور
+        const imgProcessed = new Image();
+        imgProcessed.onload = ()=>{
+            canvasProcessed.width = imgProcessed.width;
+            canvasProcessed.height = imgProcessed.height;
+            ctxProcessed.drawImage(imgProcessed,0,0);
+        }
+        imgProcessed.src = data.processed;
+
+        // رسم مسارات الغرز
+        stitchPoints = data.stitchPoints;
+        canvasStitch.width = canvasProcessed.width;
+        canvasStitch.height = canvasProcessed.height;
+        ctxStitch.fillStyle = "#000";
+        ctxStitch.fillRect(0,0,canvasStitch.width,canvasStitch.height);
+        ctxStitch.fillStyle = "#0f0";
+        stitchPoints.forEach(pt=>{
+            ctxStitch.fillRect(pt.x, pt.y, 1, 1);
+        });
+
+        // حفظ ملف PES
+        fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob = b; });
+
+        stitchInfo.textContent=`تم إنشاء المسارات. عدد الغرز: ${stitchPoints.length}`;
     })
+    .catch(err=>{
+        console.error(err);
+        stitchInfo.textContent="حدث خطأ أثناء المعالجة";
+    });
+});
 
-@app.route('/file/<filename>')
-def get_file(filename):
-    return send_file(os.path.join(UPLOAD_FOLDER, filename), as_attachment=True)
+// تنزيل ملف PES
+downloadBtn.addEventListener('click', ()=>{
+    if(!pesBlob){ alert("يجب معالجة الصورة أولاً"); return; }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(pesBlob);
+    link.download = (fileNameInput.value||'stitch_pattern')+'.pes';
+    link.click();
+    downloadInfo.textContent="تم تنزيل ملف PES بنجاح";
+});
+</script>
 
-if __name__=="__main__":
-    app.run(host="0.0.0.0", port=5000)
+</body>
+</html>
