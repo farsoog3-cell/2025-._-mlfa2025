@@ -4,24 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI تحويل الصورة إلى تطريز DST</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 body {background:#000;color:#fff;font-family:Arial,sans-serif;text-align:center;}
-section{max-width:900px;margin:30px auto;padding:20px;background:#111;border-radius:10px;}
-input,button{padding:10px;margin:5px;border-radius:5px;border:none;}
-button{background:#222;color:#fff;cursor:pointer;}
+section{max-width:800px;margin:30px auto;padding:20px;background:#111;border-radius:15px;box-shadow:0 0 15px #333;}
+input,button{padding:12px;margin:5px;border-radius:8px;border:none;font-size:1em;}
+button{background:#222;color:#fff;cursor:pointer;transition:0.2s;}
 button:hover{background:#444;}
-#consolePanel,#statsPanel,#colorsPanel{background:#111;border:1px solid #555;max-height:200px;overflow-y:auto;padding:10px;text-align:left;margin-top:20px;font-family:monospace;font-size:0.9em;}
+#consolePanel,#statsPanel,#colorsPanel{background:#111;border:1px solid #555;max-height:200px;overflow-y:auto;padding:10px;text-align:left;margin-top:15px;font-family:monospace;font-size:0.9em;}
 .color-swatch{display:inline-block;width:20px;height:20px;margin:2px;border:1px solid #fff;}
-#previewCanvas{border:1px solid #fff;margin-top:20px;max-width:100%;}
+#previewCanvas{border:1px solid #fff;margin-top:20px;max-width:100%;border-radius:8px;}
+#status{margin-top:10px;font-weight:bold;color:#0f0;}
 </style>
 </head>
 <body>
 <section>
-<h1>AI تحويل الصورة إلى تطريز DST</h1>
+<h1><i class="fa-solid fa-pen-nib"></i> AI تحويل الصورة إلى تطريز DST</h1>
 
 <input type="file" id="imageInput" accept="image/*"><br>
 <input type="text" id="fileName" placeholder="اسم الملف"><br>
-<button id="downloadBtn">تنزيل ملف DST</button>
+<button id="startBtn"><i class="fa-solid fa-play"></i> ابدأ المعالجة</button>
+<button id="downloadBtn" disabled><i class="fa-solid fa-download"></i> تنزيل الملف</button>
 
 <div id="status"></div>
 
@@ -43,6 +46,7 @@ const SERVER_URL="https://2025mlfa-2-7e2x.onrender.com/generate_dst_from_image";
 
 const imageInput=document.getElementById('imageInput');
 const fileNameInput=document.getElementById('fileName');
+const startBtn=document.getElementById('startBtn');
 const downloadBtn=document.getElementById('downloadBtn');
 const status=document.getElementById('status');
 const consolePanel=document.getElementById('consolePanel');
@@ -51,48 +55,14 @@ const colorsPanel=document.getElementById('colorsPanel');
 const previewCanvas=document.getElementById('previewCanvas');
 const previewCtx=previewCanvas.getContext('2d');
 
-function logConsole(msg){
-    consolePanel.innerHTML += msg + "<br>"; 
-    consolePanel.scrollTop = consolePanel.scrollHeight;
-}
+let generatedBlob = null;
 
-function updateStats(stats){
-    statsPanel.innerHTML = "";
-    for(const key in stats){ 
-        statsPanel.innerHTML += `<b>${key}</b>: ${stats[key]}<br>`; 
-    }
-}
+function logConsole(msg){consolePanel.innerHTML += msg + "<br>"; consolePanel.scrollTop = consolePanel.scrollHeight;}
+function updateStats(stats){statsPanel.innerHTML = ""; for(const key in stats){ statsPanel.innerHTML += `<b>${key}</b>: ${stats[key]}<br>`; }}
+function updateColors(colors){colorsPanel.innerHTML=""; colors.forEach(c=>{ const div=document.createElement('div'); div.className="color-swatch"; div.style.backgroundColor=c.hex; div.title="غرز: "+c.stitches+" - اللون: "+c.hex; colorsPanel.appendChild(div); }); }
+function drawPreview(colors){ if(!colors.length) return; previewCanvas.width=500; previewCanvas.height=500; previewCtx.fillStyle="#fff"; previewCtx.fillRect(0,0,previewCanvas.width,previewCanvas.height); colors.forEach(c=>{ previewCtx.fillStyle=c.hex; const count=Math.sqrt(c.stitches); const step=Math.max(1,Math.floor(500/count)); for(let i=0;i<count;i++){ for(let j=0;j<count;j++){ previewCtx.fillRect(i*step,j*step,1,1); } } }); }
 
-function updateColors(colors){
-    colorsPanel.innerHTML="";
-    colors.forEach(c=>{
-        const div=document.createElement('div');
-        div.className="color-swatch";
-        div.style.backgroundColor=c.hex;
-        div.title="غرز: "+c.stitches+" - اللون: "+c.hex;
-        colorsPanel.appendChild(div);
-    });
-}
-
-function drawPreview(colors){
-    if(!colors.length) return;
-    previewCanvas.width = 500;
-    previewCanvas.height = 500;
-    previewCtx.fillStyle="#fff";
-    previewCtx.fillRect(0,0,previewCanvas.width,previewCanvas.height);
-    colors.forEach(c=>{
-        previewCtx.fillStyle=c.hex;
-        const count = Math.sqrt(c.stitches);
-        const step = Math.max(1, Math.floor(500 / count));
-        for(let i=0;i<count;i++){
-            for(let j=0;j<count;j++){
-                previewCtx.fillRect(i*step,j*step,1,1);
-            }
-        }
-    });
-}
-
-downloadBtn.addEventListener('click',()=>{
+startBtn.addEventListener('click',()=>{
     const imageFile=imageInput.files[0];
     if(!imageFile){ alert("يرجى رفع الصورة"); return; }
 
@@ -100,50 +70,47 @@ downloadBtn.addEventListener('click',()=>{
     formData.append("image",imageFile);
 
     const fileName=fileNameInput.value || "ai_stitch";
-    status.textContent="جارٍ إنشاء ملف DST...";
+    status.textContent="⏳ جاري المعالجة...";
     logConsole("🚀 بدأ إرسال الصورة إلى السيرفر...");
-    const startTime = Date.now();
+    downloadBtn.disabled = true;
+    generatedBlob = null;
 
     fetch(SERVER_URL,{method:"POST",body:formData})
     .then(async res=>{
         logConsole("✅ تم تلقي الاستجابة من السيرفر: " + res.status);
-        if(!res.ok){ const text = await res.text(); throw new Error("استجابة السيرفر غير ناجحة: "+text); }
+        if(!res.ok){ const text=await res.text(); throw new Error("استجابة السيرفر غير ناجحة: "+text); }
 
-        const colorsHeader = res.headers.get('X-Colors-Info');
-        let colors = [];
-        try{ colors = JSON.parse(colorsHeader); }catch(e){ logConsole("⚠️ خطأ في قراءة ألوان الغرز من الهيدر: "+e); }
+        const colorsHeader=res.headers.get('X-Colors-Info');
+        let colors=[];
+        try{ colors=JSON.parse(colorsHeader); }catch(e){ logConsole("⚠️ خطأ في قراءة ألوان الغرز: "+e); }
         updateColors(colors);
         drawPreview(colors);
 
-        const totalStitches = colors.reduce((a,b)=>a+b.stitches,0);
-        updateStats({ "عدد الغرز التقريبي": totalStitches, "عدد الألوان": colors.length, "مدة التحويل": "جارٍ التحويل..." });
+        const totalStitches=colors.reduce((a,b)=>a+b.stitches,0);
+        updateStats({ "عدد الغرز التقريبي": totalStitches, "عدد الألوان": colors.length });
 
         return res.blob();
     })
     .then(blob=>{
-        const endTime = Date.now();
-        const timeSec = ((endTime - startTime)/1000).toFixed(2);
-
-        const link=document.createElement('a');
-        link.href=URL.createObjectURL(blob);
-        link.download=fileName+".dst";
-        link.click();
-
-        status.textContent="تم إنشاء ملف DST بنجاح!";
-        logConsole("🎉 تم تنزيل ملف DST باسم: " + fileName+".dst");
-
-        const colors = Array.from(colorsPanel.children).map((div,index)=>({
-            hex:div.style.backgroundColor,
-            stitches: parseInt(div.title.split(": ")[1])
-        }));
-        const totalStitches = colors.reduce((a,b)=>a+b.stitches,0);
-        updateStats({ "عدد الغرز التقريبي": totalStitches, "عدد الألوان": colors.length, "مدة التحويل": timeSec + " ثانية" });
+        generatedBlob = blob;
+        downloadBtn.disabled = false;
+        status.textContent="✅ تمت المعالجة! يمكنك تنزيل الملف الآن.";
+        logConsole("🎉 الملف جاهز للتنزيل.");
     })
     .catch(err=>{
         console.error(err);
-        status.textContent="حدث خطأ أثناء إنشاء ملف DST.";
-        logConsole("❌ خطأ: " + err);
+        status.textContent="❌ حدث خطأ أثناء المعالجة.";
+        logConsole("❌ خطأ: "+err);
     });
+});
+
+downloadBtn.addEventListener('click',()=>{
+    if(!generatedBlob) return;
+    const fileName = fileNameInput.value || "ai_stitch";
+    const link=document.createElement('a');
+    link.href=URL.createObjectURL(generatedBlob);
+    link.download=fileName+".dst";
+    link.click();
 });
 </script>
 </body>
