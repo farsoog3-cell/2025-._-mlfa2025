@@ -1,100 +1,86 @@
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>باترون تطريز متقدم</title>
-<style>
-body { font-family: Arial; text-align:center; background:#111; color:#fff; }
-canvas { border:1px solid #000; margin-top:10px; max-width:100%; }
-button,input { padding:10px; margin:5px; border-radius:5px; }
-#images { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
-</style>
-</head>
-<body>
+# server.py
+from flask import Flask, request, jsonify, send_file, url_for
+from pyembroidery import EmbPattern, STITCH, write_pes
+from PIL import Image, ImageOps
+import io, os, math, uuid, base64
 
-<h1>باترون تطريز متقدم</h1>
-<input type="file" id="imageInput" accept="image/*"><br>
-<button id="processBtn">رفع ومعالجة الصورة</button><br>
+app = Flask(__name__)
+UPLOAD_FOLDER = "/tmp"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-<div id="images">
-<canvas id="canvasOriginal"></canvas>
-<canvas id="canvasProcessed"></canvas>
-</div>
+def remove_background(img):
+    img = img.convert("RGBA")
+    datas = img.getdata()
+    newData = []
+    for item in datas:
+        if item[0]>200 and item[1]>200 and item[2]>200:
+            newData.append((255,255,255,0))
+        else:
+            newData.append(item)
+    img.putdata(newData)
+    return img
 
-<input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف">
-<button id="downloadBtn">تنزيل ملف PES</button>
-<div id="info"></div>
+@app.route("/process_image", methods=["POST"])
+def process_image():
+    if 'image' not in request.files:
+        return "لا توجد صورة!", 400
+    file = request.files['image']
+    img = Image.open(file)
 
-<script>
-const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/process_image";
+    # حفظ الصورة الأصلية
+    original_io = io.BytesIO()
+    img.save(original_io, format='PNG')
+    original_io.seek(0)
+    original_data = "data:image/png;base64," + base64.b64encode(original_io.getvalue()).decode()
 
-const imageInput = document.getElementById('imageInput');
-const processBtn = document.getElementById('processBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const fileNameInput = document.getElementById('fileName');
-const info = document.getElementById('info');
+    # إزالة الخلفية
+    img_no_bg = remove_background(img)
 
-const canvasOriginal = document.getElementById('canvasOriginal');
-const ctxOriginal = canvasOriginal.getContext('2d');
+    # تحويل أبيض وأسود
+    bw = img_no_bg.convert("L")  # Grayscale
 
-const canvasProcessed = document.getElementById('canvasProcessed');
-const ctxProcessed = canvasProcessed.getContext('2d');
+    processed_io = io.BytesIO()
+    bw.save(processed_io, format='PNG')
+    processed_io.seek(0)
+    processed_data = "data:image/png;base64," + base64.b64encode(processed_io.getvalue()).decode()
 
-let stitchPoints = [];
-let pesBlob = null;
+    # تحليل الغرز zig-zag
+    stitchPoints=[]
+    step=4
+    width,height = bw.size
+    for y in range(0,height,step):
+        rowPoints=[]
+        for x in range(0,width,step):
+            gray = bw.getpixel((x,y))
+            if gray<128:
+                rowPoints.append({'x':x,'y':y,'type':'fill'})
+        if (y//step)%2==1: rowPoints.reverse()
+        stitchPoints.extend(rowPoints)
 
-// رفع ومعالجة الصورة على السيرفر
-processBtn.addEventListener('click', () => {
-    const file = imageInput.files[0];
-    if(!file){ alert("اختر صورة أولاً"); return; }
+    # إنشاء ملف PES
+    pattern = EmbPattern()
+    last_point=None
+    for pt in stitchPoints:
+        x,y = pt['x'], pt['y']
+        if last_point:
+            distance = math.hypot(x-last_point[0], y-last_point[1])
+            if distance>20: pattern.add_jump_absolute(x,y)
+        pattern.add_stitch_absolute(x,y)
+        last_point=(x,y)
+    pattern.end()
+    pes_filename = os.path.join(UPLOAD_FOLDER,str(uuid.uuid4())+".pes")
+    write_pes(pattern,pes_filename)
 
-    const formData = new FormData();
-    formData.append('image', file);
-
-    info.textContent = "جاري معالجة الصورة...";
-    fetch(SERVER_URL, { method:'POST', body:formData })
-    .then(res=>res.json())
-    .then(data=>{
-        // عرض الصور
-        const original = new Image();
-        original.onload = ()=>{ 
-            canvasOriginal.width = original.width;
-            canvasOriginal.height = original.height;
-            ctxOriginal.drawImage(original,0,0);
-        };
-        original.src = data.original;
-
-        const processed = new Image();
-        processed.onload = ()=>{
-            canvasProcessed.width = processed.width;
-            canvasProcessed.height = processed.height;
-            ctxProcessed.drawImage(processed,0,0);
-        };
-        processed.src = data.processed;
-
-        // حفظ نقاط الغرز
-        stitchPoints = data.stitchPoints;
-        // حفظ ملف PES كبوب
-        fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob=b; });
-
-        info.textContent = `تمت المعالجة. عدد الغرز: ${stitchPoints.length}`;
+    return jsonify({
+        'original': original_data,
+        'processed': processed_data,
+        'stitchPoints': stitchPoints,
+        'pes': url_for('get_file', filename=os.path.basename(pes_filename))
     })
-    .catch(err=>{
-        console.error(err);
-        info.textContent = "حدث خطأ أثناء المعالجة";
-    });
-});
 
-// تنزيل ملف PES
-downloadBtn.addEventListener('click', ()=>{
-    if(!pesBlob){ alert("يجب معالجة الصورة أولاً"); return; }
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(pesBlob);
-    link.download = (fileNameInput.value||'stitch_pattern')+'.pes';
-    link.click();
-    info.textContent="تم تنزيل ملف PES بنجاح";
-});
-</script>
-</body>
-</html>
+@app.route('/file/<filename>')
+def get_file(filename):
+    return send_file(os.path.join(UPLOAD_FOLDER, filename), as_attachment=True)
+
+if __name__=="__main__":
+    app.run(host="0.0.0.0", port=5000)
