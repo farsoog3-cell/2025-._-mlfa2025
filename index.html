@@ -51,20 +51,41 @@ const colorsPanel=document.getElementById('colorsPanel');
 const previewCanvas=document.getElementById('previewCanvas');
 const previewCtx=previewCanvas.getContext('2d');
 
-function logConsole(msg){consolePanel.innerHTML += msg + "<br>"; consolePanel.scrollTop = consolePanel.scrollHeight;}
-function updateStats(stats){statsPanel.innerHTML = ""; for(const key in stats){ statsPanel.innerHTML += `<b>${key}</b>: ${stats[key]}<br>`; }}
-function updateColors(colors){colorsPanel.innerHTML=""; colors.forEach(c=>{ const div=document.createElement('div'); div.className="color-swatch"; div.style.backgroundColor=c.hex; div.title="غرز: "+c.stitches+" - اللون: "+c.hex; colorsPanel.appendChild(div); }); }
+function logConsole(msg){
+    consolePanel.innerHTML += msg + "<br>"; 
+    consolePanel.scrollTop = consolePanel.scrollHeight;
+}
+
+function updateStats(stats){
+    statsPanel.innerHTML = "";
+    for(const key in stats){ 
+        statsPanel.innerHTML += `<b>${key}</b>: ${stats[key]}<br>`; 
+    }
+}
+
+function updateColors(colors){
+    colorsPanel.innerHTML="";
+    colors.forEach(c=>{
+        const div=document.createElement('div');
+        div.className="color-swatch";
+        div.style.backgroundColor=c.hex;
+        div.title="غرز: "+c.stitches+" - اللون: "+c.hex;
+        colorsPanel.appendChild(div);
+    });
+}
+
 function drawPreview(colors){
     if(!colors.length) return;
     previewCanvas.width = 500;
     previewCanvas.height = 500;
     previewCtx.fillStyle="#fff";
     previewCtx.fillRect(0,0,previewCanvas.width,previewCanvas.height);
-    colors.forEach((c,idx)=>{
+    colors.forEach(c=>{
         previewCtx.fillStyle=c.hex;
-        const step=Math.max(1, Math.floor(500/Math.sqrt(c.stitches)));
-        for(let i=0;i<Math.sqrt(c.stitches);i++){
-            for(let j=0;j<Math.sqrt(c.stitches);j++){
+        const count = Math.sqrt(c.stitches);
+        const step = Math.max(1, Math.floor(500 / count));
+        for(let i=0;i<count;i++){
+            for(let j=0;j<count;j++){
                 previewCtx.fillRect(i*step,j*step,1,1);
             }
         }
@@ -74,6 +95,7 @@ function drawPreview(colors){
 downloadBtn.addEventListener('click',()=>{
     const imageFile=imageInput.files[0];
     if(!imageFile){ alert("يرجى رفع الصورة"); return; }
+
     const formData=new FormData();
     formData.append("image",imageFile);
 
