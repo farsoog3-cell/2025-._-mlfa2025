@@ -33,8 +33,6 @@ button:hover{background:#444;}
 <section>
 <h1>AI تحويل الصورة إلى تطريز</h1>
 
-<p>رابط السيرفر: <a href="https://2025mlfa-2-7e2x.onrender.com" target="_blank" style="color:#0f0;">https://2025mlfa-2-7e2x.onrender.com</a></p>
-
 <input type="file" id="imageInput" accept="image/*"><br>
 <input type="text" id="fileName" placeholder="اسم الملف"><br>
 <button id="downloadBtn">تنزيل ملف PES</button>
@@ -142,7 +140,7 @@ downloadBtn.addEventListener('click',()=>{
         };
         updateStats(finalStats);
 
-        // تحديث الألوان النهائية (يمكن استخراجها حقيقيًا من تحليل الصورة لاحقًا)
+        // تحديث الألوان النهائية
         const finalColors=[
             {name:"أحمر",hex:"#FF0000",stitches:"≈ 1200"},
             {name:"أزرق",hex:"#0000FF",stitches:"≈ 800"},
