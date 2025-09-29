@@ -3,36 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>باترون تطريز ذكي</title>
+<title>ذكاء اصطناعي للتطريز</title>
 <style>
-body { font-family: Arial; background:#111; color:#fff; text-align:center; margin:0; padding:0;}
-.container { max-width:1000px; margin:auto; padding:20px;}
-h1 { margin-bottom:20px; }
-canvas { border:1px solid #444; margin:10px auto; max-width:90%; display:block; }
-button,input,select { padding:10px; margin:5px; border-radius:5px; border:none; background:#222; color:#fff; cursor:pointer;}
-button:hover,input:hover,select:hover{background:#444;}
-.options { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:15px; }
-#log { background:#000; color:#0f0; padding:10px; text-align:left; font-family:monospace; max-height:200px; overflow:auto; margin-top:10px;}
+body {
+    margin:0;
+    font-family: 'Orbitron', sans-serif;
+    background: linear-gradient(120deg,#0f0c29,#302b63,#24243e);
+    color:#0f0;
+    text-align:center;
+}
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+h1{
+    font-size:2.5em;
+    margin-bottom:20px;
+    text-shadow: 0 0 10px #0f0;
+}
+canvas{
+    border:1px solid #0f0;
+    margin:10px auto;
+    max-width:90%;
+    background:#000;
+}
+button,input,select{
+    padding:10px 15px;
+    margin:5px;
+    border-radius:8px;
+    border:none;
+    background:#111;
+    color:#0f0;
+    font-family: 'Orbitron', sans-serif;
+    cursor:pointer;
+    transition:0.2s;
+}
+button:hover,input:hover,select:hover{
+    background:#222;
+    box-shadow:0 0 10px #0f0;
+}
+.options{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:15px;
+}
+#log{
+    background:#000;
+    color:#0f0;
+    padding:15px;
+    text-align:left;
+    font-family:monospace;
+    max-height:300px;
+    overflow:auto;
+    border:1px solid #0f0;
+    margin-top:10px;
+}
 </style>
 </head>
 <body>
 
 <div class="container">
-<h1>باترون تطريز ذكي</h1>
+<h1>ذكاء اصطناعي للتطريز</h1>
 
 <div class="options">
 <input type="file" id="imageInput" accept="image/*">
-<select id="processingOptions">
-    <option value="none">بدون معالجة</option>
-    <option value="remove_bg">إزالة الخلفية</option>
-    <option value="bw">أبيض وأسود</option>
-    <option value="both">أبيض وأسود + إزالة الخلفية</option>
-</select>
 <select id="downloadFormat">
     <option value="pes">PES</option>
     <option value="png">PNG</option>
     <option value="jpg">JPG</option>
 </select>
+<button id="processBtn">ابدأ المعالجة الذكية</button>
 <button id="downloadBtn">تنزيل الملف</button>
 </div>
 
@@ -45,17 +88,18 @@ button:hover,input:hover,select:hover{background:#444;}
 <h3>مسارات الغرز:</h3>
 <canvas id="canvasStitch"></canvas>
 
-<h3>سجل العمليات (تشبه البرمجة):</h3>
+<h3>سجل العمليات:</h3>
 <div id="log"></div>
+
 </div>
 
 <script>
 const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/process_image";
 
 const imageInput = document.getElementById('imageInput');
-const processingOptions = document.getElementById('processingOptions');
-const downloadFormat = document.getElementById('downloadFormat');
+const processBtn = document.getElementById('processBtn');
 const downloadBtn = document.getElementById('downloadBtn');
+const downloadFormat = document.getElementById('downloadFormat');
 
 const canvasOriginal = document.getElementById('canvasOriginal');
 const ctxOriginal = canvasOriginal.getContext('2d');
@@ -69,20 +113,16 @@ const log = document.getElementById('log');
 let pesBlob = null;
 let uploadedFile = null;
 
-// وظيفة إضافة سجل
 function addLog(msg){
     log.textContent += msg + "\n";
     log.scrollTop = log.scrollHeight;
 }
 
-// رفع الصورة ومعالجتها تلقائيًا عند الاختيار
+// رفع وعرض الصورة الأصلية
 imageInput.addEventListener('change', ()=>{
     const file = imageInput.files[0];
     if(!file) return;
     uploadedFile = file;
-    addLog("تم اختيار الصورة: " + file.name);
-
-    // عرض الصورة الأصلية
     const reader = new FileReader();
     reader.onload = e=>{
         const img = new Image();
@@ -90,28 +130,31 @@ imageInput.addEventListener('change', ()=>{
             canvasOriginal.width = img.width;
             canvasOriginal.height = img.height;
             ctxOriginal.drawImage(img,0,0);
-            addLog("عرض الصورة الأصلية");
+            addLog("تم تحميل الصورة الأصلية: " + file.name);
         }
         img.src = e.target.result;
     }
     reader.readAsDataURL(file);
+});
 
-    // إرسال الصورة للسيرفر لمعالجتها تلقائيًا
+// معالجة ذكية
+processBtn.addEventListener('click', ()=>{
+    if(!uploadedFile){ alert("اختر صورة أولاً"); return; }
     const formData = new FormData();
-    formData.append('image', file);
-    formData.append('processing', processingOptions.value);
-    addLog("جارٍ إرسال الصورة للسيرفر مع خيار: " + processingOptions.value);
+    formData.append('image', uploadedFile);
+    formData.append('processing', 'ai_full'); // يطلب معالجة كاملة ذكية
 
-    fetch(SERVER_URL,{method:'POST', body:formData})
+    addLog("جارٍ إرسال الصورة للسيرفر للمعالجة الذكية...");
+    fetch(SERVER_URL,{method:'POST',body:formData})
     .then(res=>res.json())
     .then(data=>{
-        // عرض الصورة بعد المعالجة
+        // عرض الصورة المعالجة
         const imgProcessed = new Image();
         imgProcessed.onload = ()=>{
             canvasProcessed.width = imgProcessed.width;
             canvasProcessed.height = imgProcessed.height;
             ctxProcessed.drawImage(imgProcessed,0,0);
-            addLog("تم عرض الصورة بعد المعالجة");
+            addLog("تم عرض الصورة بعد المعالجة الذكية");
         }
         imgProcessed.src = data.processed;
 
@@ -130,40 +173,32 @@ imageInput.addEventListener('change', ()=>{
         // حفظ ملف PES
         fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob=b; });
         data.log.forEach(l=>addLog(l));
-        addLog("تم تجهيز الملف للتنزيل");
+        addLog("تم تجهيز الملف الذكي للتنزيل");
     })
     .catch(err=>{
         console.error(err);
-        addLog("حدث خطأ أثناء المعالجة");
+        addLog("حدث خطأ أثناء المعالجة الذكية");
     });
 });
 
 // تنزيل الملف
 downloadBtn.addEventListener('click', ()=>{
     if(!uploadedFile){ alert("اختر صورة أولاً"); return; }
-    if(downloadFormat.value==="pes" && !pesBlob){ alert("الملف PES لم يُجهز بعد، انتظر"); return; }
-
+    if(!pesBlob){ alert("الملف لم يُجهز بعد"); return; }
+    const link = document.createElement('a');
     if(downloadFormat.value==="pes"){
-        const link = document.createElement('a');
         link.href = URL.createObjectURL(pesBlob);
-        link.download = (uploadedFile.name.split('.')[0] || 'stitch_pattern') + ".pes";
-        link.click();
-        addLog("تم تنزيل ملف PES");
+        link.download = (uploadedFile.name.split('.')[0] || 'stitch_pattern')+".pes";
+    } else if(downloadFormat.value==="jpg"){
+        link.href = canvasProcessed.toDataURL('image/jpeg');
+        link.download = (uploadedFile.name.split('.')[0] || 'processed_image')+".jpg";
     } else {
-        const canvas = canvasProcessed;
-        const link = document.createElement('a');
-        if(downloadFormat.value==="jpg"){
-            link.href = canvas.toDataURL('image/jpeg');
-            link.download = (uploadedFile.name.split('.')[0] || 'processed_image') + ".jpg";
-        } else {
-            link.href = canvas.toDataURL('image/png');
-            link.download = (uploadedFile.name.split('.')[0] || 'processed_image') + ".png";
-        }
-        link.click();
-        addLog("تم تنزيل الصورة بعد المعالجة بصيغة " + downloadFormat.value.toUpperCase());
+        link.href = canvasProcessed.toDataURL('image/png');
+        link.download = (uploadedFile.name.split('.')[0] || 'processed_image')+".png";
     }
+    link.click();
+    addLog("تم تنزيل الملف بصيغة "+downloadFormat.value.toUpperCase());
 });
 </script>
-
 </body>
 </html>
