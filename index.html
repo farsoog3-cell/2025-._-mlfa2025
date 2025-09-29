@@ -3,91 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>باترون تطريز متكامل تلقائي</title>
+<title>باترون تطريز ذكي</title>
 <style>
-body { font-family: Arial; text-align:center; background:#111; color:#fff; }
-.tabs { display:flex; justify-content:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-.tab { padding:10px 20px; cursor:pointer; background:#222; border-radius:5px; }
-.tab.active { background:#444; }
-.tab-content { display:none; margin-top:10px; }
-.tab-content.active { display:block; }
-canvas { border:1px solid #000; margin:10px auto; max-width:90%; }
-button,input { padding:10px; margin:5px; border-radius:5px; }
+body { font-family: Arial; background:#111; color:#fff; text-align:center; margin:0; padding:0;}
+.container { max-width:1000px; margin:auto; padding:20px;}
+h1 { margin-bottom:20px; }
+canvas { border:1px solid #444; margin:10px auto; max-width:90%; display:block; }
+button,input,select { padding:10px; margin:5px; border-radius:5px; border:none; background:#222; color:#fff; cursor:pointer;}
+button:hover,input:hover,select:hover{background:#444;}
+.options { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:15px; }
+#log { background:#000; color:#0f0; padding:10px; text-align:left; font-family:monospace; max-height:200px; overflow:auto; margin-top:10px;}
 </style>
 </head>
 <body>
 
-<h1>باترون تطريز متكامل تلقائي</h1>
+<div class="container">
+<h1>باترون تطريز ذكي</h1>
 
-<div class="tabs">
-    <div class="tab active" data-tab="upload">رفع الصورة</div>
-    <div class="tab" data-tab="processed">الصورة المعالجة</div>
-    <div class="tab" data-tab="stitch">مسارات الغرز</div>
-    <div class="tab" data-tab="download">تنزيل PES</div>
+<div class="options">
+<input type="file" id="imageInput" accept="image/*">
+<select id="processingOptions">
+    <option value="none">بدون معالجة</option>
+    <option value="remove_bg">إزالة الخلفية</option>
+    <option value="bw">أبيض وأسود</option>
+    <option value="both">أبيض وأسود + إزالة الخلفية</option>
+</select>
+<select id="downloadFormat">
+    <option value="pes">PES</option>
+    <option value="png">PNG</option>
+    <option value="jpg">JPG</option>
+</select>
+<button id="downloadBtn">تنزيل الملف</button>
 </div>
 
-<!-- تبويب رفع الصورة -->
-<div class="tab-content active" id="upload">
-    <input type="file" id="imageInput" accept="image/*"><br>
-    <canvas id="canvasOriginal"></canvas>
-</div>
+<h3>الصورة الأصلية:</h3>
+<canvas id="canvasOriginal"></canvas>
 
-<!-- تبويب الصورة المعالجة -->
-<div class="tab-content" id="processed">
-    <canvas id="canvasProcessed"></canvas>
-</div>
+<h3>الصورة بعد المعالجة:</h3>
+<canvas id="canvasProcessed"></canvas>
 
-<!-- تبويب مسارات الغرز -->
-<div class="tab-content" id="stitch">
-    <canvas id="canvasStitch"></canvas><br>
-    <div id="stitchInfo"></div>
-</div>
+<h3>مسارات الغرز:</h3>
+<canvas id="canvasStitch"></canvas>
 
-<!-- تبويب تنزيل PES -->
-<div class="tab-content" id="download">
-    <input type="text" id="fileName" value="stitch_pattern" placeholder="اسم الملف"><br>
-    <button id="downloadBtn">تنزيل ملف PES</button>
-    <div id="downloadInfo"></div>
+<h3>سجل العمليات (تشبه البرمجة):</h3>
+<div id="log"></div>
 </div>
 
 <script>
 const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/process_image";
 
-// التبويبات
-const tabs = document.querySelectorAll('.tab');
-const contents = document.querySelectorAll('.tab-content');
-tabs.forEach(tab=>{
-    tab.addEventListener('click', ()=>{
-        tabs.forEach(t=>t.classList.remove('active'));
-        contents.forEach(c=>c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-    });
-});
-
-// عناصر الصفحة
 const imageInput = document.getElementById('imageInput');
+const processingOptions = document.getElementById('processingOptions');
+const downloadFormat = document.getElementById('downloadFormat');
+const downloadBtn = document.getElementById('downloadBtn');
+
 const canvasOriginal = document.getElementById('canvasOriginal');
 const ctxOriginal = canvasOriginal.getContext('2d');
 const canvasProcessed = document.getElementById('canvasProcessed');
 const ctxProcessed = canvasProcessed.getContext('2d');
 const canvasStitch = document.getElementById('canvasStitch');
 const ctxStitch = canvasStitch.getContext('2d');
-const fileNameInput = document.getElementById('fileName');
-const stitchInfo = document.getElementById('stitchInfo');
-const downloadInfo = document.getElementById('downloadInfo');
-const downloadBtn = document.getElementById('downloadBtn');
+
+const log = document.getElementById('log');
 
 let pesBlob = null;
 let uploadedFile = null;
 
-// رفع الصورة ومعالجة تلقائية
+// وظيفة إضافة سجل
+function addLog(msg){
+    log.textContent += msg + "\n";
+    log.scrollTop = log.scrollHeight;
+}
+
+// رفع الصورة ومعالجتها تلقائيًا عند الاختيار
 imageInput.addEventListener('change', ()=>{
     const file = imageInput.files[0];
     if(!file) return;
     uploadedFile = file;
+    addLog("تم اختيار الصورة: " + file.name);
 
-    // عرض الصورة الأصلية فورًا
+    // عرض الصورة الأصلية
     const reader = new FileReader();
     reader.onload = e=>{
         const img = new Image();
@@ -95,24 +90,28 @@ imageInput.addEventListener('change', ()=>{
             canvasOriginal.width = img.width;
             canvasOriginal.height = img.height;
             ctxOriginal.drawImage(img,0,0);
+            addLog("عرض الصورة الأصلية");
         }
         img.src = e.target.result;
     }
     reader.readAsDataURL(file);
 
-    // إرسال الصورة للسيرفر تلقائيًا
+    // إرسال الصورة للسيرفر لمعالجتها تلقائيًا
     const formData = new FormData();
     formData.append('image', file);
-    stitchInfo.textContent="جاري المعالجة تلقائيًا...";
-    fetch(SERVER_URL, {method:'POST', body:formData})
+    formData.append('processing', processingOptions.value);
+    addLog("جارٍ إرسال الصورة للسيرفر مع خيار: " + processingOptions.value);
+
+    fetch(SERVER_URL,{method:'POST', body:formData})
     .then(res=>res.json())
     .then(data=>{
-        // عرض الصورة المعالجة
+        // عرض الصورة بعد المعالجة
         const imgProcessed = new Image();
         imgProcessed.onload = ()=>{
             canvasProcessed.width = imgProcessed.width;
             canvasProcessed.height = imgProcessed.height;
             ctxProcessed.drawImage(imgProcessed,0,0);
+            addLog("تم عرض الصورة بعد المعالجة");
         }
         imgProcessed.src = data.processed;
 
@@ -126,26 +125,43 @@ imageInput.addEventListener('change', ()=>{
         points.forEach(pt=>{
             ctxStitch.fillRect(pt.x, pt.y, 1, 1);
         });
+        addLog("تم رسم مسارات الغرز. عدد الغرز: " + points.length);
 
         // حفظ ملف PES
         fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob=b; });
-        stitchInfo.textContent=`تم المعالجة تلقائيًا. عدد الغرز: ${points.length}`;
-        downloadInfo.textContent="";
+        data.log.forEach(l=>addLog(l));
+        addLog("تم تجهيز الملف للتنزيل");
     })
     .catch(err=>{
         console.error(err);
-        stitchInfo.textContent="حدث خطأ أثناء المعالجة";
+        addLog("حدث خطأ أثناء المعالجة");
     });
 });
 
-// تنزيل PES
+// تنزيل الملف
 downloadBtn.addEventListener('click', ()=>{
-    if(!pesBlob){ alert("الملف لم يُجهز بعد، انتظر قليلاً"); return; }
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(pesBlob);
-    link.download = (fileNameInput.value||'stitch_pattern')+'.pes';
-    link.click();
-    downloadInfo.textContent="تم تنزيل ملف PES بنجاح";
+    if(!uploadedFile){ alert("اختر صورة أولاً"); return; }
+    if(downloadFormat.value==="pes" && !pesBlob){ alert("الملف PES لم يُجهز بعد، انتظر"); return; }
+
+    if(downloadFormat.value==="pes"){
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(pesBlob);
+        link.download = (uploadedFile.name.split('.')[0] || 'stitch_pattern') + ".pes";
+        link.click();
+        addLog("تم تنزيل ملف PES");
+    } else {
+        const canvas = canvasProcessed;
+        const link = document.createElement('a');
+        if(downloadFormat.value==="jpg"){
+            link.href = canvas.toDataURL('image/jpeg');
+            link.download = (uploadedFile.name.split('.')[0] || 'processed_image') + ".jpg";
+        } else {
+            link.href = canvas.toDataURL('image/png');
+            link.download = (uploadedFile.name.split('.')[0] || 'processed_image') + ".png";
+        }
+        link.click();
+        addLog("تم تنزيل الصورة بعد المعالجة بصيغة " + downloadFormat.value.toUpperCase());
+    }
 });
 </script>
 
