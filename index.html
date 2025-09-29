@@ -3,94 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ذكاء اصطناعي للتطريز</title>
+<title>mlfa2025.010</title>
 <style>
 body {
-    margin:0;
-    font-family: 'Orbitron', sans-serif;
-    background: linear-gradient(120deg,#0f0c29,#302b63,#24243e);
-    color:#0f0;
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #121212;
+    color: #fff;
+}
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+}
+header {
     text-align:center;
+    margin-bottom:30px;
 }
-.container{
-    max-width:1200px;
-    margin:auto;
-    padding:20px;
-}
-h1{
+header h1 {
     font-size:2.5em;
-    margin-bottom:20px;
-    text-shadow: 0 0 10px #0f0;
+    border-bottom:2px solid #fff;
+    padding-bottom:10px;
 }
-canvas{
-    border:1px solid #0f0;
-    margin:10px auto;
-    max-width:90%;
-    background:#000;
+header p {
+    font-size:1em;
+    color:#aaa;
 }
-button,input,select{
-    padding:10px 15px;
-    margin:5px;
-    border-radius:8px;
-    border:none;
-    background:#111;
-    color:#0f0;
-    font-family: 'Orbitron', sans-serif;
-    cursor:pointer;
-    transition:0.2s;
+.section {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
 }
-button:hover,input:hover,select:hover{
-    background:#222;
-    box-shadow:0 0 10px #0f0;
+canvas {
+    border: 1px solid #fff;
+    max-width: 100%;
+    display: block;
+    margin: 10px auto;
+    background-color: #000;
 }
-.options{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:10px;
-    margin-bottom:15px;
+button, input, select {
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    background-color: #333;
+    color: #fff;
+    transition: 0.2s;
 }
-#log{
-    background:#000;
-    color:#0f0;
-    padding:15px;
-    text-align:left;
-    font-family:monospace;
-    max-height:300px;
-    overflow:auto;
-    border:1px solid #0f0;
-    margin-top:10px;
+button:hover, input:hover, select:hover {
+    background-color: #555;
+}
+.options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+#log {
+    background-color: #000;
+    color: #0f0;
+    padding: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #fff;
+    font-family: monospace;
 }
 </style>
 </head>
 <body>
 
 <div class="container">
-<h1>ذكاء اصطناعي للتطريز</h1>
+<header>
+    <h1>mlfa2025.010</h1>
+    <p>تطوير: فارس وملهم</p>
+</header>
 
-<div class="options">
-<input type="file" id="imageInput" accept="image/*">
-<select id="downloadFormat">
-    <option value="pes">PES</option>
-    <option value="png">PNG</option>
-    <option value="jpg">JPG</option>
-</select>
-<button id="processBtn">ابدأ المعالجة الذكية</button>
-<button id="downloadBtn">تنزيل الملف</button>
+<div class="section">
+    <h3>خيارات المعالجة:</h3>
+    <div class="options">
+        <input type="file" id="imageInput" accept="image/*">
+        <select id="downloadFormat">
+            <option value="pes">PES</option>
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+        </select>
+        <button id="processBtn">ابدأ المعالجة</button>
+        <button id="downloadBtn">تنزيل الملف</button>
+    </div>
 </div>
 
-<h3>الصورة الأصلية:</h3>
-<canvas id="canvasOriginal"></canvas>
+<div class="section">
+    <h3>الصورة الأصلية:</h3>
+    <canvas id="canvasOriginal"></canvas>
+</div>
 
-<h3>الصورة بعد المعالجة:</h3>
-<canvas id="canvasProcessed"></canvas>
+<div class="section">
+    <h3>الصورة بعد المعالجة:</h3>
+    <canvas id="canvasProcessed"></canvas>
+</div>
 
-<h3>مسارات الغرز:</h3>
-<canvas id="canvasStitch"></canvas>
+<div class="section">
+    <h3>مسارات الغرز:</h3>
+    <canvas id="canvasStitch"></canvas>
+</div>
 
-<h3>سجل العمليات:</h3>
-<div id="log"></div>
-
+<div class="section">
+    <h3>سجل العمليات:</h3>
+    <div id="log"></div>
+</div>
 </div>
 
 <script>
@@ -118,7 +141,7 @@ function addLog(msg){
     log.scrollTop = log.scrollHeight;
 }
 
-// رفع وعرض الصورة الأصلية
+// عرض الصورة الأصلية
 imageInput.addEventListener('change', ()=>{
     const file = imageInput.files[0];
     if(!file) return;
@@ -137,24 +160,28 @@ imageInput.addEventListener('change', ()=>{
     reader.readAsDataURL(file);
 });
 
-// معالجة ذكية
+// معالجة الصورة
 processBtn.addEventListener('click', ()=>{
     if(!uploadedFile){ alert("اختر صورة أولاً"); return; }
     const formData = new FormData();
     formData.append('image', uploadedFile);
-    formData.append('processing', 'ai_full'); // يطلب معالجة كاملة ذكية
+    formData.append('processing', 'full');
 
-    addLog("جارٍ إرسال الصورة للسيرفر للمعالجة الذكية...");
+    addLog("جارٍ إرسال الصورة للسيرفر...");
     fetch(SERVER_URL,{method:'POST',body:formData})
     .then(res=>res.json())
     .then(data=>{
+        if(data.error){
+            addLog("حدث خطأ أثناء المعالجة: " + data.error);
+            return;
+        }
         // عرض الصورة المعالجة
         const imgProcessed = new Image();
         imgProcessed.onload = ()=>{
             canvasProcessed.width = imgProcessed.width;
             canvasProcessed.height = imgProcessed.height;
             ctxProcessed.drawImage(imgProcessed,0,0);
-            addLog("تم عرض الصورة بعد المعالجة الذكية");
+            addLog("تم عرض الصورة بعد المعالجة");
         }
         imgProcessed.src = data.processed;
 
@@ -173,11 +200,11 @@ processBtn.addEventListener('click', ()=>{
         // حفظ ملف PES
         fetch(data.pes).then(r=>r.blob()).then(b=>{ pesBlob=b; });
         data.log.forEach(l=>addLog(l));
-        addLog("تم تجهيز الملف الذكي للتنزيل");
+        addLog("تم تجهيز الملف للتنزيل");
     })
     .catch(err=>{
         console.error(err);
-        addLog("حدث خطأ أثناء المعالجة الذكية");
+        addLog("حدث خطأ أثناء الاتصال بالسيرفر");
     });
 });
 
@@ -201,4 +228,4 @@ downloadBtn.addEventListener('click', ()=>{
 });
 </script>
 </body>
-</html>
+    </html>
