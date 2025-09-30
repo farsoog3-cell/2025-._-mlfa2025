@@ -1,74 +1,110 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>رسم متقن لمسار DST - ملء الشاشة</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة رسم DST حديثة</title>
 <style>
-body, html{
-    margin:0;
-    padding:0;
+/* ==========================
+   إعدادات عامة
+========================== */
+* { box-sizing: border-box; margin:0; padding:0; }
+body, html {
     height:100%;
     width:100%;
-    font-family:system-ui;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display:flex;
     flex-direction:column;
+    background: #f0f2f5;
 }
 
-header{
-    padding:10px;
-    text-align:center;
-    background:#222;
+/* ==========================
+   رأس الصفحة
+========================== */
+header {
+    background: linear-gradient(90deg,#4b6cb7,#182848);
     color:#fff;
-    flex: 0 0 auto;
+    text-align:center;
+    padding: 15px 0;
+    font-size: 1.4em;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
-#main{
+/* ==========================
+   المنطقة الرئيسية
+========================== */
+#main {
     flex:1 1 auto;
     display:flex;
-    flex-direction:row;
     overflow:hidden;
 }
 
-canvas{
+/* ==========================
+   لوحة الرسم والمعاينة
+========================== */
+canvas {
     display:block;
     touch-action:none;
 }
 
-#board{
+#board {
     flex:1 1 auto;
+    background: #fff;
+    border-right:2px solid #ddd;
 }
 
-#preview{
-    width:300px; /* تبقى كما هي */
-    border-left:2px solid #aaa;
-    background:#f0f0f0;
+#preview {
+    width:300px;
+    background:#fdfdfd;
+    border-left:2px solid #ccc;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
 }
 
-.controls{
+/* ==========================
+   شريط التحكم
+========================== */
+.controls {
     flex:0 0 auto;
     padding:10px;
-    text-align:center;
-    background:#f7f7fb;
-}
-
-button{
-    padding:8px 12px;
-    margin:0 5px;
-    border-radius:6px;
-    border:1px solid #cfd6e8;
     background:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-top:2px solid #ddd;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
 }
 
-.warn{
-    color:#a00;
-    font-size:13px;
-    margin-top:6px;
+button {
+    padding:10px 16px;
+    margin:0 8px;
+    border-radius:8px;
+    border:none;
+    background: #4b6cb7;
+    color:#fff;
+    font-weight:600;
+    cursor:pointer;
+    transition: 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
+
+button:hover {
+    background:#182848;
+}
+
+.warn {
+    color:#d00;
+    font-size:0.85em;
+    margin-left:15px;
+}
+
+/* ==========================
+   تصميم حديث ومرتب
+========================== */
 </style>
 </head>
 <body>
-<header>رسم متقن لمسار DST - ملء الشاشة</header>
+<header>لوحة رسم DST - حديثة ومرتبة</header>
 <div id="main">
     <canvas id="board"></canvas>
     <canvas id="preview"></canvas>
@@ -76,8 +112,8 @@ button{
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
-    <button id="export-dst">تصدير DST متقن</button>
-    <div class="warn">سترى الرسم في معاينة DST فورًا. الملف الناتج سيطابقه تمامًا.</div>
+    <button id="export-dst">تصدير DST</button>
+    <div class="warn">المعاينة تظهر فورًا. الملف الناتج مطابق تمامًا للرسم.</div>
 </div>
 
 <script>
