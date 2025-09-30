@@ -14,13 +14,13 @@ button{padding:8px 12px;margin:0 5px;border-radius:6px;border:1px solid #cfd6e8;
 </style>
 </head>
 <body>
-<header>رسم متقن لمسار DST - بدون حواف</header>
+<header>رسم متقن لمسار DST - نسخة احترافية</header>
 <canvas id="board"></canvas>
 <div class="controls">
 <button id="undo">تراجع</button>
 <button id="clear">مسح</button>
 <button id="export-dst">تصدير DST متقن</button>
-<div class="warn">ملف DST صناعي للاختبار - التصميم سيطابق اللوح تماماً.</div>
+<div class="warn">الملف الناتج سيطابق الرسم على اللوح تمامًا.</div>
 </div>
 
 <script>
@@ -31,12 +31,13 @@ let strokes = [];
 let current = [];
 let drawing = false;
 
-// DPI وMM للتحويل
-const DPI = 203; 
+// DPI / MM
+const DPI = 203;
 const MM_PER_INCH = 25.4;
 function pxToMM(px){ return px / DPI * MM_PER_INCH; }
 
-function resize() {
+// حجم اللوح
+function resize(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
     redraw();
@@ -44,7 +45,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// ======= الرسم =======
+// ===== الرسم =====
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
 function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; }
@@ -74,24 +75,22 @@ function redraw(){
     drawStroke(current);
 }
 
-// ======= أزرار =======
+// ===== أزرار =====
 document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
-// ======= DST عالي الدقة =======
-const MAX_STEP = 30; // خطوة صغيرة لزيادة الدقة
+// ===== DST =====
+const MAX_STEP = 10; // دقة عالية جدًا
 
 function getBounds(strokes){
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    let minX=Infinity,minY=Infinity;
     for(const stroke of strokes){
         for(const p of stroke){
             if(p.x<minX) minX=p.x;
             if(p.y<minY) minY=p.y;
-            if(p.x>maxX) maxX=p.x;
-            if(p.y>maxY) maxY=p.y;
         }
     }
-    return {minX,minY,maxX,maxY};
+    return {minX,minY};
 }
 
 function normalizeStrokes(strokes){
@@ -115,7 +114,7 @@ function splitStep(dx,dy){
 function encodeStep(dx,dy,control){
     let b0=0,b1=0,b2=0;
     function applyAxis(v,axis){
-        const sign = v<0?-1:1; let absv=Math.abs(v);
+        const sign=v<0?-1:1; let absv=Math.abs(v);
         const W=[81,27,9,3,1];
         for(const w of W){
             if(absv>=w){
@@ -140,8 +139,7 @@ function encodeStep(dx,dy,control){
     if(control===0)b2|=0x03;
     else if(control===1)b2|=0x83;
     else if(control===2)b2|=0x23;
-    b0&=0xFF;b1&=0xFF;b2&=0xFF;
-    return [b0,b1,b2];
+    return [b0&0xFF,b1&0xFF,b2&0xFF];
 }
 
 function buildDST(strokes){
@@ -149,7 +147,7 @@ function buildDST(strokes){
     const allPoints=[];
     for(const stroke of normalized){
         for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
-        allPoints.push(null); // TRIM
+        allPoints.push(null);
     }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
