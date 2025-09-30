@@ -2,12 +2,11 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>استخراج معلومات DST/PES متكامل</title>
+<title>استخراج معلومات DST/PES</title>
 <style>
 body { font-family:sans-serif; background:#111; color:#fff; padding:20px; }
 button { padding:10px 15px; margin:5px; cursor:pointer; }
-textarea { width:100%; height:200px; margin-top:10px; background:#222; color:#fff; }
-#previewCanvas { width:100%; max-height:400px; margin-top:10px; border:1px solid #555; background:#000; }
+#previewCanvas { display:none; } /* نخفي المعاينة */
 </style>
 </head>
 <body>
@@ -15,18 +14,12 @@ textarea { width:100%; height:200px; margin-top:10px; background:#222; color:#ff
 <h2>رفع ملف DST/PES لاستخراج المعلومات</h2>
 <input type="file" id="dstFile" accept=".dst,.pes">
 <button id="extractBtn">استخراج المعلومات</button>
-<button id="copyBtn">نسخ JSON</button>
-<button id="downloadBtn">تحميل JSON</button>
-
-<canvas id="previewCanvas"></canvas>
-<textarea id="output" placeholder="ستظهر المعلومات هنا..." readonly></textarea>
+<button id="downloadBtn" disabled>تنزيل JSON</button>
 
 <script>
 const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/extract_dst_info";
 
 let extractedData = {};
-const canvas = document.getElementById('previewCanvas');
-const ctx = canvas.getContext('2d');
 
 document.getElementById('extractBtn').onclick = async function() {
   const fileInput = document.getElementById('dstFile');
@@ -42,41 +35,13 @@ document.getElementById('extractBtn').onclick = async function() {
       const text = await res.text();
       throw new Error(text || 'حدث خطأ أثناء إرسال الملف');
     }
-    const data = await res.json();
-    extractedData = data;
-    document.getElementById('output').value = JSON.stringify(data, null, 2);
-
-    // رسم معاينة التطريز
-    const stitches = data.stitches;
-    const colors = data.colors;
-    if(stitches.length === 0) return;
-
-    const xs = stitches.map(s=>s.x);
-    const ys = stitches.map(s=>s.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-
-    canvas.width = maxX - minX + 10;
-    canvas.height = maxY - minY + 10;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    for(let s of stitches){
-      const c = colors[s.color_idx];
-      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-      ctx.fillRect(s.x - minX, s.y - minY, 1, 1);
-    }
-
+    extractedData = await res.json();
+    // تفعيل زر التنزيل بعد نجاح العملية
+    document.getElementById('downloadBtn').disabled = false;
+    alert('تم استخراج المعلومات، الملف جاهز للتنزيل!');
   } catch(err) {
     alert('خطأ: ' + err.message);
   }
-};
-
-document.getElementById('copyBtn').onclick = function() {
-  if(!extractedData || !Object.keys(extractedData).length) return;
-  navigator.clipboard.writeText(JSON.stringify(extractedData, null, 2));
-  alert('تم نسخ المعلومات!');
 };
 
 document.getElementById('downloadBtn').onclick = function() {
@@ -88,7 +53,6 @@ document.getElementById('downloadBtn').onclick = function() {
   a.download = "dst_data.json";
   a.click();
   URL.revokeObjectURL(url);
-  alert('تم تحميل JSON بنجاح!');
 };
 </script>
 
