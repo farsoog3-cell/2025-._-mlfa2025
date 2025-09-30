@@ -34,14 +34,17 @@ let strokes=[], current=[], drawing=false;
 // ===== إعداد التحجيم =====
 let BOARD_MM = 200;  // زيادة عدد المليمترات لتحسين الدقة
 let PX_PER_MM = 1;
+
 function resizeCanvas(){
     board.width = board.clientWidth;
     board.height = board.clientHeight;
     PX_PER_MM = board.width / BOARD_MM;
     redraw();
 }
+
+// التأكد من أن الكانفاس جاهز بعد تحميل الصفحة
+window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 
 function pxToMM(px){ return px / PX_PER_MM; }
 function mmToPx(mm){ return mm * PX_PER_MM; }
