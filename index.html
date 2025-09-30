@@ -1,3 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة رسم DST حديثة</title>
+<style>
+body, html {
+    margin:0;
+    padding:0;
+    height:100%;
+    width:100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display:flex;
+    flex-direction:column;
+    background: #f0f2f5;
+}
+
+header {
+    background: linear-gradient(90deg,#4b6cb7,#182848);
+    color:#fff;
+    text-align:center;
+    padding: 15px 0;
+    font-size: 1.4em;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+#main {
+    flex:1 1 auto;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+    gap:20px;
+    min-height:0;
+}
+
+canvas {
+    display:block;
+    background:#fff;
+    border-radius:20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    border:2px solid #ccc;
+    flex-shrink:0;
+}
+
+#board {
+    width:70vmin;
+    height:70vmin;
+}
+
+#preview {
+    width:25vmin;
+    height:25vmin;
+}
+
+.controls {
+    flex:0 0 auto;
+    padding:10px;
+    background:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-top:2px solid #ddd;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+    flex-wrap: wrap;
+}
+
+button {
+    padding:10px 16px;
+    margin:5px;
+    border-radius:12px;
+    border:none;
+    background: #4b6cb7;
+    color:#fff;
+    font-weight:600;
+    cursor:pointer;
+    transition: 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+button:hover {
+    background:#182848;
+}
+
+.warn {
+    color:#d00;
+    font-size:0.85em;
+    margin-left:15px;
+}
+</style>
+</head>
 <body>
 <header>لوحة رسم DST - حديثة ومرتبة</header>
 <div id="main">
@@ -21,21 +114,10 @@ let strokes = [];
 let current = [];
 let drawing = false;
 
-// DPI و MM
 const DPI = 203;
 const MM_PER_INCH = 25.4;
 function pxToMM(px){ return px / DPI * MM_PER_INCH; }
 
-function resize(){
-    board.width = window.innerWidth - preview.width;
-    board.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
-    preview.height = board.height;
-    redraw();
-}
-window.addEventListener('resize', resize);
-resize();
-
-// ===== الرسم =====
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
 function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; redraw(); }
@@ -54,16 +136,17 @@ function redraw(){
     ctx.strokeStyle='#000';
     ctx.lineJoin='round';
     ctx.lineCap='round';
-    function drawStroke(st){
-        if(!st || st.length<2) return;
-        ctx.beginPath();
-        ctx.moveTo(st[0].x,st[0].y);
-        for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x,st[i].y);
-        ctx.stroke();
-    }
     for(const s of strokes) drawStroke(s);
     drawStroke(current);
     updatePreview();
+}
+
+function drawStroke(st){
+    if(!st || st.length<2) return;
+    ctx.beginPath();
+    ctx.moveTo(st[0].x,st[0].y);
+    for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x,st[i].y);
+    ctx.stroke();
 }
 
 // ===== أزرار =====
