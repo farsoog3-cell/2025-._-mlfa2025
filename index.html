@@ -32,8 +32,6 @@ header {
     justify-content:center;
     align-items:center;
     padding:20px;
-    gap:20px;
-    min-height:0;
 }
 
 canvas {
@@ -42,17 +40,11 @@ canvas {
     border-radius:20px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     border:2px solid #ccc;
-    flex-shrink:0;
 }
 
 #board {
-    width:70vmin;
-    height:70vmin;
-}
-
-#preview {
-    width:25vmin;
-    height:25vmin;
+    width:80vmin;
+    height:80vmin;
 }
 
 .controls {
@@ -95,21 +87,18 @@ button:hover {
 <header>لوحة رسم DST - حديثة ومرتبة</header>
 <div id="main">
     <canvas id="board"></canvas>
-    <canvas id="preview"></canvas>
 </div>
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">المعاينة تظهر فورًا. الملف الناتج مطابق تمامًا للرسم.</div>
+    <div class="warn">ارسم على اللوح لتصدير ملف DST.</div>
 </div>
 
 <script>
 // ====== إعداد الرسم ======
 const board = document.getElementById('board');
 const ctx = board.getContext('2d');
-const preview = document.getElementById('preview');
-const ctxPreview = preview.getContext('2d');
 let strokes = [];
 let current = [];
 let drawing = false;
@@ -138,7 +127,6 @@ function redraw(){
     ctx.lineCap='round';
     for(const s of strokes) drawStroke(s);
     drawStroke(current);
-    updatePreview();
 }
 
 function drawStroke(st){
@@ -248,27 +236,6 @@ function buildDST(strokes){
     const buf=new Uint8Array(512+bodyBytes.length);
     buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512);
     return buf.buffer;
-}
-
-// ===== معاينة حية =====
-function updatePreview(){
-    ctxPreview.clearRect(0,0,preview.width,preview.height);
-    ctxPreview.strokeStyle='#f00';
-    ctxPreview.lineWidth=1;
-    ctxPreview.lineJoin='round';
-    ctxPreview.lineCap='round';
-    const normalized = normalizeStrokes(strokes.concat(current));
-    const {maxX,maxY} = getBounds(normalized);
-    const scaleX = preview.width / (maxX||preview.width);
-    const scaleY = preview.height / (maxY||preview.height);
-    const scale = Math.min(scaleX,scaleY);
-    for(const stroke of normalized){
-        if(stroke.length<2) continue;
-        ctxPreview.beginPath();
-        ctxPreview.moveTo(stroke[0].x*scale, stroke[0].y*scale);
-        for(let i=1;i<stroke.length;i++) ctxPreview.lineTo(stroke[i].x*scale, stroke[i].y*scale);
-        ctxPreview.stroke();
-    }
 }
 
 // ===== تصدير =====
