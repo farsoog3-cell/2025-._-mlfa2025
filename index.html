@@ -12,12 +12,15 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         min-height: 100vh;
         margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
     }
     h1 {
         margin-bottom: 20px;
+        text-align: center;
     }
     input, button {
         margin: 10px 0;
@@ -29,6 +32,8 @@
     canvas {
         margin-top: 20px;
         border: 2px solid #fff;
+        max-width: 100%;
+        height: auto;
     }
     .notice {
         margin-top: 20px;
@@ -69,9 +74,13 @@ imageInput.addEventListener('change', (e) => {
 });
 
 img.onload = function() {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
+    // ضبط حجم الصورة ليناسب الشاشة
+    const maxWidth = window.innerWidth * 0.9;
+    const maxHeight = window.innerHeight * 0.6;
+    let scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
 function convertToDST() {
@@ -80,20 +89,18 @@ function convertToDST() {
     const imageData = ctx.getImageData(0, 0, width, height);
     const pixels = imageData.data;
 
-    // إنشاء بيانات DST بسيطة
     let dstData = [];
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const i = (y * width + x) * 4;
             const gray = 0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2];
-            if (gray < 128) { // لون أسود يعني غرزة
+            if (gray < 128) {
                 dstData.push([x, y]);
             }
         }
     }
 
-    // إنشاء ملف DST (نسخة بسيطة جدًا)
-    let dstFile = "DST_HEADER_PLACEHOLDER"; // تحتاج مكتبة حقيقية لـ DST الحقيقي
+    let dstFile = "DST_HEADER_PLACEHOLDER";
     dstFile += dstData.map(p => `${p[0]},${p[1]}\n`).join('');
 
     const blob = new Blob([dstFile], { type: 'application/octet-stream' });
