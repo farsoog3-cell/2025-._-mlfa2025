@@ -31,7 +31,14 @@
 
     <div class="controls">
       <label>سمك الإبرة: <input id="thickness" type="range" min="1" max="8" value="2"></label>
-      <label>حجم القماش: <select id="scale"><option value="1">100%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1.5">150%</option></select></label>
+      <label>حجم القماش: 
+        <select id="scale">
+          <option value="1">100%</option>
+          <option value="0.5">50%</option>
+          <option value="0.75">75%</option>
+          <option value="1.5">150%</option>
+        </select>
+      </label>
       <button id="undo">تراجع</button>
       <button id="clear">مسح</button>
       <button id="export-json">صدّر JSON</button>
@@ -39,7 +46,7 @@
     </div>
 
     <p class="note">طريقة العمل: ارسم بالغرز على اللوحة (انقر/اسحب أو المس). كل نقطة تمثل غرزة. اضغط "صدّر ملف .DST" لتنزيل ملف .dst (صيغة مبسطة للاختبار).</p>
-    <footer>ملاحظة: هذا الملف <strong>ليس</strong> رقمنة صناعية معقدة — هو تنسيق مبسّط للاختبار. أرسل لي إذا تريد تحويله إلى صيغة Tajima DST قياسية وسأبني مشغلات تشفير أدق.</footer>
+    <footer>ملاحظة: هذا الملف <strong>ليس</strong> رقمنة صناعية معقدة — هو تنسيق مبسّط للاختبار.</footer>
   </main>
 
 <script>
@@ -47,7 +54,7 @@
   const canvas = document.getElementById('board');
   const ctx = canvas.getContext('2d');
   let drawing = false;
-  let points = []; // array of strokes; each stroke is array of {x,y}
+  let points = []; // array of strokes
   let current = [];
 
   function resizeCanvas(){
@@ -125,7 +132,10 @@
   document.getElementById('clear').addEventListener('click',()=>{ points=[]; current=[]; redraw(); });
   document.getElementById('undo').addEventListener('click',()=>{ points.pop(); redraw(); });
   document.getElementById('thickness').addEventListener('input', redraw);
-  document.getElementById('scale').addEventListener('change',(e)=>{ const s= +e.target.value; canvas.style.transform = `scale(${s})`; });
+  document.getElementById('scale').addEventListener('change',(e)=>{ 
+    const s= +e.target.value; 
+    canvas.style.transform = `scale(${s})`; 
+  });
 
   document.getElementById('export-json').addEventListener('click',()=>{
     const meta = {created:new Date().toISOString(), note:'simple DST-like JSON export from web tool'};
@@ -134,7 +144,7 @@
     const a = document.createElement('a'); a.href = url; a.download = 'design.json'; a.click(); URL.revokeObjectURL(url);
   });
 
-  // Export a simple "DST-like" file. WARNING: this is NOT a full Tajima encoder.
+  // simplified .DST export
   document.getElementById('export-dst').addEventListener('click',()=>{
     const all = [];
     for(const stroke of points){
@@ -159,7 +169,7 @@
       prev = item;
     }
 
-    const header = `SIMPLE-EMB-0.1\nGenerated-by: simple-dst-generator\nCreated: ${new Date().toISOString()}\nNote: THIS IS A SIMPLIFIED/TEST FORMAT, NOT FULL TAJIMA DST.\nEND_HEADER\n`;
+    const header = `SIMPLE-EMB-0.1\\nGenerated-by: simple-dst-generator\\nCreated: ${new Date().toISOString()}\\nNote: THIS IS A SIMPLIFIED/TEST FORMAT, NOT FULL TAJIMA DST.\\nEND_HEADER\\n`;
     let size = header.length;
     for(const r of deltas){
       size += 1;
