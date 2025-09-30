@@ -16,30 +16,19 @@
     <form id="uploadForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
         <label class="block text-gray-700 mb-2 font-semibold">📷 اختر صورة:</label>
-        <input
-          type="file"
-          id="imageInput"
-          accept="image/*"
+        <input type="file" id="imageInput" accept="image/*"
           class="file:mr-4 file:py-2 file:px-4
                  file:rounded-full file:border-0
                  file:text-sm file:font-semibold
                  file:bg-blue-600 file:text-white
                  hover:file:bg-blue-700
-                 block w-full text-gray-700 border rounded-lg p-2"
-        />
+                 block w-full text-gray-700 border rounded-lg p-2"/>
       </div>
 
       <div>
         <label class="block text-gray-700 mb-2 font-semibold">📐 حجم القالب (عدد المربعات):</label>
-        <input
-          type="number"
-          id="gridSize"
-          name="grid_size"
-          value="40"
-          min="10"
-          max="200"
-          class="w-full border rounded-lg p-2"
-        />
+        <input type="number" id="gridSize" name="grid_size" value="40" min="10" max="200"
+          class="w-full border rounded-lg p-2"/>
       </div>
 
       <div>
@@ -61,10 +50,7 @@
       </div>
 
       <div class="col-span-1 md:col-span-2 flex justify-center">
-        <button
-          type="submit"
-          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition"
-        >
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition">
           🚀 إنشاء القالب
         </button>
       </div>
@@ -73,18 +59,16 @@
     <div id="previewSection" class="hidden mt-8 text-center">
       <h2 class="text-xl font-semibold text-gray-700 mb-2">📑 معاينة:</h2>
       <iframe id="pdfPreview" class="w-full h-96 border rounded-lg shadow"></iframe>
-      <a
-        id="downloadLink"
-        href="#"
-        download="pattern.pdf"
-        class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg"
-      >
+      <a id="downloadLink" href="#" download="pattern.pdf"
+        class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg">
         تحميل PDF
       </a>
     </div>
   </div>
 
   <script>
+    const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com"; // رابط السيرفر النهائي
+
     const form = document.getElementById("uploadForm");
     const imageInput = document.getElementById("imageInput");
     const gridSize = document.getElementById("gridSize");
@@ -96,7 +80,6 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       if (!imageInput.files.length) {
         alert("الرجاء اختيار صورة أولاً");
         return;
@@ -109,7 +92,7 @@
       formData.append("fabric_type", fabricType.value);
 
       try {
-        const response = await fetch("/upload", {
+        const response = await fetch(`${SERVER_URL}/upload`, {
           method: "POST",
           body: formData,
         });
