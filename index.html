@@ -17,13 +17,13 @@ button:hover { background:#182848;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST فائقة الدقة</header>
+<header>لوحة رسم DST ذكية</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">ارسم على اللوح لتصدير ملف DST مطابق تمامًا لكل غرزة.</div>
+    <div class="warn">ارسم على اللوح لتصدير ملف DST مطابق تمامًا لمساراتك.</div>
 </div>
 
 <script>
@@ -31,12 +31,13 @@ const board = document.getElementById('board');
 const ctx = board.getContext('2d');
 let strokes=[], current=[], drawing=false;
 
+// إعداد التحجيم
 const BOARD_MM = 100; 
 const PX_PER_MM = board.width / BOARD_MM; 
 function pxToMM(px){ return px / PX_PER_MM; }
 function mmToPx(mm){ return mm * PX_PER_MM; }
 
-const GRID_STEP_MM = 1; // شبكة دقيقة جداً كل 1 مم
+const GRID_STEP_MM = 1; 
 function drawGrid(){
     ctx.strokeStyle='#eee';
     ctx.lineWidth=0.5;
@@ -73,7 +74,8 @@ function drawStroke(st){ if(!st || st.length<2) return; ctx.beginPath(); ctx.mov
 document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
-const MAX_STEP = 2; // دقة عالية جداً
+// ===== DST الذكي =====
+const MAX_STEP = 2;
 
 function splitStep(dx,dy){
     const steps=[]; let rx=dx, ry=dy;
@@ -87,7 +89,7 @@ function splitStep(dx,dy){
 
 function encodeStep(dx,dy,control){
     let b0=0,b1=0,b2=0;
-    function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40); } else { if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}}
+    function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);} else { if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}}
     applyAxis(dx,'x'); applyAxis(dy,'y');
     if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23;
     return [b0&0xFF,b1&0xFF,b2&0xFF];
@@ -95,7 +97,10 @@ function encodeStep(dx,dy,control){
 
 function buildDST(strokes){
     const allPoints=[];
-    for(const stroke of strokes){ for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)}); allPoints.push(null); }
+    for(const stroke of strokes){
+        for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
+        allPoints.push(null);
+    }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
     const bodyBytes=[]; let first=false;
@@ -107,7 +112,7 @@ function buildDST(strokes){
         for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
     }
     bodyBytes.push(0x00,0x00,0xF3);
-    const header=new Uint8Array(512); header.fill(0x20); const name='JS_PRECISE'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const header=new Uint8Array(512); header.fill(0x20); const name='JS_SMART'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
     const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
@@ -115,7 +120,7 @@ document.getElementById('export-dst').onclick=()=>{
     if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
     const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'}); const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_ultra_precise.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_smart.dst'; a.click();
     URL.revokeObjectURL(url);
 };
 
