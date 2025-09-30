@@ -3,200 +3,117 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>مولد ملف .DST بسيط — رسم وتصدير</title>
+  <title>مولد ملف DST بسيط</title>
   <style>
-    :root{direction:rtl;font-family:system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
-    body{max-width:980px;margin:24px auto;padding:18px;border-radius:12px;background:#f7f7fb}
-    header{display:flex;gap:12px;align-items:center}
-    h1{margin:0;font-size:18px}
-    .canvas-wrap{background:#fff;padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(12,20,40,0.06)}
-    canvas{background:#fff;border:1px dashed #d3d7e0;border-radius:8px;touch-action:none}
-    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    button,select,input[type=range]{padding:8px 12px;border-radius:8px;border:1px solid #cfd6e8;background:white}
-    .note{margin-top:12px;color:#444;font-size:13px}
-    footer{margin-top:12px;font-size:12px;color:#666}
+    body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px;background:#f9f9f9}
+    canvas{border:1px solid #ccc;touch-action:none}
+    .controls{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+    button{padding:6px 12px}
   </style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>مولد ملف <code>.DST</code> بسيط — ارسم غرزك وصدر ملف</h1>
-      <div class="note">هذه أداة تعليمية/اختبارية: تصدر ملف <code>.dst</code> بصيغة مبسطة (قابلة للاختبار). لتجهيز تصميم احترافي للماكينة استخدم برنامج ديجتايز احترافي.</div>
-    </div>
-  </header>
-
-  <main class="canvas-wrap">
-    <canvas id="board" width="800" height="450"></canvas>
-
-    <div class="controls">
-      <label>سمك الإبرة: <input id="thickness" type="range" min="1" max="8" value="2"></label>
-      <label>حجم القماش: <select id="scale"><option value="1">100%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1.5">150%</option></select></label>
-      <button id="undo">تراجع</button>
-      <button id="clear">مسح</button>
-      <button id="export-json">صدّر JSON</button>
-      <button id="export-dst">صدّر ملف .DST</button>
-    </div>
-
-    <p class="note">طريقة العمل: ارسم بالغرز على اللوحة (انقر/اسحب أو المس). كل نقطة تمثل غرزة. اضغط "صدّر ملف .DST" لتنزيل ملف .dst (صيغة مبسطة للاختبار).</p>
-    <footer>ملاحظة: هذا الملف <strong>ليس</strong> رقمنة صناعية معقدة — هو تنسيق مبسّط للاختبار. أرسل لي إذا تريد تحويله إلى صيغة Tajima DST قياسية وسأبني مشغلات تشفير أدق.</footer>
-  </main>
-
+  <h1>صفحة توليد ملف <code>.DST</code> (تجريبية)</h1>
+  <canvas id="board" width="600" height="400"></canvas>
+  <div class="controls">
+    <button id="undo">تراجع</button>
+    <button id="clear">مسح</button>
+    <button id="export-json">تصدير JSON</button>
+    <button id="export-dst">تصدير ملف DST</button>
+  </div>
+  <p>ارسم بالماوس أو اللمس. ثم صدّر ملف DST مبسط (للتجربة فقط، ليس صيغة صناعية مكتملة).</p>
 <script>
 (() => {
   const canvas = document.getElementById('board');
   const ctx = canvas.getContext('2d');
   let drawing = false;
-  let points = []; // array of strokes; each stroke is array of {x,y}
-  let current = [];
-
-  function fitCanvas(){
-    // nothing fancy for now
-  }
+  let points = [];
+  let currentStroke = [];
 
   function start(x,y){
     drawing = true;
-    current = [{x,y}];
+    currentStroke = [{x,y}];
   }
   function move(x,y){
     if(!drawing) return;
-    current.push({x,y});
+    currentStroke.push({x,y});
     redraw();
   }
   function end(){
     if(!drawing) return;
     drawing = false;
-    if(current.length) points.push(current);
-    current = [];
+    if(currentStroke.length>0){
+      points.push(currentStroke);
+    }
+    currentStroke = [];
   }
 
   function redraw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    const thickness = +document.getElementById('thickness').value;
-    ctx.lineWidth = thickness*2;
-    ctx.strokeStyle = '#222';
-
-    function drawStroke(st){
-      if(!st || st.length===0) return;
+    ctx.lineWidth=2;
+    ctx.strokeStyle="#000";
+    ctx.lineJoin="round";
+    ctx.lineCap="round";
+    function drawStroke(stroke){
+      if(stroke.length<2) return;
       ctx.beginPath();
-      ctx.moveTo(st[0].x, st[0].y);
-      for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x, st[i].y);
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for(let i=1;i<stroke.length;i++){
+        ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
       ctx.stroke();
     }
-
     for(const s of points) drawStroke(s);
-    if(current.length) drawStroke(current);
+    drawStroke(currentStroke);
   }
 
-  // mouse
-  canvas.addEventListener('mousedown',(e)=>{
-    const r = canvas.getBoundingClientRect();
-    start(e.clientX - r.left, e.clientY - r.top);
+  canvas.addEventListener('mousedown', e=>{
+    const r=canvas.getBoundingClientRect();
+    start(e.clientX-r.left, e.clientY-r.top);
   });
-  window.addEventListener('mousemove',(e)=>{
+  canvas.addEventListener('mousemove', e=>{
     if(!drawing) return;
-    const r = canvas.getBoundingClientRect();
-    move(e.clientX - r.left, e.clientY - r.top);
+    const r=canvas.getBoundingClientRect();
+    move(e.clientX-r.left, e.clientY-r.top);
   });
-  window.addEventListener('mouseup',end);
+  window.addEventListener('mouseup', end);
 
-  // touch
-  canvas.addEventListener('touchstart',(ev)=>{
-    ev.preventDefault();
-    const t = ev.touches[0];
-    const r = canvas.getBoundingClientRect();
-    start(t.clientX - r.left, t.clientY - r.top);
+  canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    const t=e.touches[0];const r=canvas.getBoundingClientRect();
+    start(t.clientX-r.left, t.clientY-r.top);
   },{passive:false});
-  canvas.addEventListener('touchmove',(ev)=>{
-    ev.preventDefault();
-    const t = ev.touches[0];
-    const r = canvas.getBoundingClientRect();
-    move(t.clientX - r.left, t.clientY - r.top);
+  canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    const t=e.touches[0];const r=canvas.getBoundingClientRect();
+    move(t.clientX-r.left, t.clientY-r.top);
   },{passive:false});
-  canvas.addEventListener('touchend',(ev)=>{ ev.preventDefault(); end(); },{passive:false});
+  canvas.addEventListener('touchend', e=>{
+    e.preventDefault();end();
+  },{passive:false});
 
-  // controls
-  document.getElementById('clear').addEventListener('click',()=>{ points=[]; current=[]; redraw(); });
-  document.getElementById('undo').addEventListener('click',()=>{ points.pop(); redraw(); });
-  document.getElementById('thickness').addEventListener('input', redraw);
-  document.getElementById('scale').addEventListener('change',(e)=>{ const s= +e.target.value; canvas.style.transform = `scale(${s})`; });
+  document.getElementById('clear').onclick=()=>{points=[];currentStroke=[];redraw();}
+  document.getElementById('undo').onclick=()=>{points.pop();redraw();}
 
-  document.getElementById('export-json').addEventListener('click',()=>{
-    const meta = {created:new Date().toISOString(), note:'simple DST-like JSON export from web tool'};
-    const blob = new Blob([JSON.stringify({meta,points},null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'design.json'; a.click(); URL.revokeObjectURL(url);
-  });
+  document.getElementById('export-json').onclick=()=>{
+    const blob=new Blob([JSON.stringify(points)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="design.json";a.click();URL.revokeObjectURL(url);
+  }
 
-  // Export a simple "DST-like" file. WARNING: this is NOT a full Tajima encoder.
-  // We'll produce a binary file that starts with a short human-readable header and then a compact list of relative stitch deltas.
-  document.getElementById('export-dst').addEventListener('click',()=>{
-    // convert points to relative integers (0.1 mm units or pixels as-is)
-    const all = [];
+  document.getElementById('export-dst').onclick=()=>{
+    // NOTE: very simplified DST-like format (not real Tajima)
+    let data="SIMPLE DST FILE\n";
     for(const stroke of points){
-      if(stroke.length===0) continue;
-      for(const p of stroke) all.push([Math.round(p.x), Math.round(p.y)]);
-      // insert a command for jump/trim between strokes: represented as null separator
-      all.push(null);
-    }
-    if(all.length===0){ alert('لا توجد غرز لتصدير — ارسم أولاً'); return; }
-
-    // compute relative deltas
-    const deltas = [];
-    let prev = all[0] || [0,0];
-    let started=false;
-    for(const item of all){
-      if(item===null){ deltas.push({cmd:'TRIM'}); started=false; continue; }
-      if(!started){ // first stitch or after trim -> do a jump (move without stitching) and then stitch
-        deltas.push({cmd:'JUMP', dx:item[0]-prev[0], dy:item[1]-prev[1]});
-        prev = item; started=true; continue;
-      }
-      const dx = item[0]-prev[0];
-      const dy = item[1]-prev[1];
-      deltas.push({cmd:'STITCH', dx, dy});
-      prev = item;
-    }
-
-    // build binary blob: header (text), then sequence of small records.
-    // record format (this simplified custom):
-    // - 1 byte: type (0x01 = JUMP, 0x02 = STITCH, 0x03 = TRIM)
-    // - for JUMP/STITCH: 2 bytes signed little-endian dx, 2 bytes signed little-endian dy
-    // This is NOT the Tajima DST binary format. It's a small, compact test format saved with .dst extension.
-
-    const header = `SIMPLE-EMB-0.1\nGenerated-by: simple-dst-generator\nCreated: ${new Date().toISOString()}\nNote: THIS IS A SIMPLIFIED/TEST FORMAT, NOT FULL TAJIMA DST.\nEND_HEADER\n`;
-    // estimate size
-    let size = header.length;
-    for(const r of deltas){
-      size += 1;
-      if(r.cmd==='JUMP' || r.cmd==='STITCH') size += 4;
-    }
-    const buf = new ArrayBuffer(size);
-    const view = new DataView(buf);
-    let offset = 0;
-    // write header as ASCII
-    for(let i=0;i<header.length;i++){ view.setUint8(offset++, header.charCodeAt(i)); }
-    // records
-    for(const r of deltas){
-      if(r.cmd==='JUMP'){
-        view.setUint8(offset++, 0x01);
-        view.setInt16(offset, r.dx, true); offset+=2;
-        view.setInt16(offset, r.dy, true); offset+=2;
-      } else if(r.cmd==='STITCH'){
-        view.setUint8(offset++, 0x02);
-        view.setInt16(offset, r.dx, true); offset+=2;
-        view.setInt16(offset, r.dy, true); offset+=2;
-      } else if(r.cmd==='TRIM'){
-        view.setUint8(offset++, 0x03);
+      data+="STROKE\n";
+      for(const p of stroke){
+        data+=p.x+","+p.y+"\n";
       }
     }
+    const blob=new Blob([data],{type:"text/plain"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="design.dst";a.click();URL.revokeObjectURL(url);
+  }
 
-    const blob = new Blob([buf], {type:'application/octet-stream'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'design_simple.dst'; a.click(); URL.revokeObjectURL(url);
-  });
-
-  // initial draw
   redraw();
 })();
 </script>
