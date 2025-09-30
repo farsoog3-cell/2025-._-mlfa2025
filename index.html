@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة رسم DST فائقة الدقة</title>
+<title>لوحة رسم DST دقيقة ومرنة</title>
 <style>
 body, html { margin:0; padding:0; height:100%; width:100%; font-family: 'Segoe UI', sans-serif; display:flex; flex-direction:column; background: #f0f2f5;}
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding: 15px 0; font-size: 1.4em; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.2);}
@@ -17,13 +17,13 @@ button:hover { background:#182848;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST فائقة الدقة</header>
+<header>لوحة رسم DST دقيقة ومرنة</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">الرسم يظهر بدقة قصوى في ملف DST.</div>
+    <div class="warn">كل ما ترسمه سيظهر في ملف DST بدقة عالية.</div>
 </div>
 
 <script>
@@ -32,7 +32,7 @@ const ctx = board.getContext('2d');
 let strokes=[], current=[], drawing=false;
 
 // ===== إعداد التحجيم =====
-let BOARD_MM = 400;  // دقة قصوى
+let BOARD_MM = 200;  
 let PX_PER_MM = 1;
 
 function resizeCanvas(){
@@ -59,16 +59,14 @@ function drawGrid(){
 }
 
 // ===== أحداث الرسم =====
-const DIST_THRESHOLD = 0.3; // بالملم لتصفية النقاط القريبة جدًا
 function start(x,y){ drawing=true; current=[{x,y}]; }
-function move(x,y){
-    if(!drawing) return;
+function move(x,y){ if(!drawing) return; 
     const last = current[current.length-1];
-    const dx = pxToMM(x - last.x);
-    const dy = pxToMM(y - last.y);
-    if(Math.sqrt(dx*dx + dy*dy) < DIST_THRESHOLD) return;
-    current.push({x,y});
-    redraw();
+    // تجاهل النقاط القريبة جدًا لتجنب مشاكل الخطوط المستقيمة
+    const dx = x - last.x, dy = y - last.y;
+    if(Math.sqrt(dx*dx + dy*dy) < 0.5) return;
+    current.push({x,y}); 
+    redraw(); 
 }
 function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; redraw(); }
 
@@ -97,7 +95,7 @@ document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
 // ===== DST الذكي =====
-const MAX_STEP = 0.7; // خطوة صغيرة للحصول على دقة قصوى
+const MAX_STEP = 1; // زيادة خطوة قليلاً للرسم الحر
 
 function splitStep(dx,dy){
     const steps=[]; let rx=dx, ry=dy;
@@ -148,17 +146,14 @@ function buildDST(strokes){
         for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
     }
     bodyBytes.push(0x00,0x00,0xF3);
-    const header=new Uint8Array(512); header.fill(0x20); const name='JS_FINAL';
-    for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
-    const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); 
-    return buf.buffer;
+    const header=new Uint8Array(512); header.fill(0x20); const name='JS_FINAL'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
 document.getElementById('export-dst').onclick=()=>{
     if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
     const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
-    const blob=new Blob([buf],{type:'application/octet-stream'}); 
-    const url=URL.createObjectURL(blob);
+    const blob=new Blob([buf],{type:'application/octet-stream'}); const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download='design_final.dst'; a.click();
     URL.revokeObjectURL(url);
 };
