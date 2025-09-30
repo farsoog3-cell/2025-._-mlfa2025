@@ -1,118 +1,99 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>مولد قوالب التطريز</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>مولد قوالب التطريز</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-pink-100 to-blue-100 min-h-screen flex items-center justify-center p-6">
-  <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-3xl w-full">
-    <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">🧵 مولد قوالب التطريز الاحترافي</h1>
-    <p class="text-center text-gray-600 mb-6">
-      ارفع صورة، اختر الإعدادات، واحصل على قالب تطريز مع قائمة الأدوات وملف PDF
-    </p>
+<div class="bg-white shadow-2xl rounded-3xl p-8 max-w-3xl w-full">
+<h1 class="text-3xl font-bold text-center text-gray-800 mb-4">🧵 مولد قوالب التطريز الاحترافي</h1>
+<p class="text-center text-gray-600 mb-6">ارفع صورة، اختر الإعدادات، وشاهد القالب مباشرة.</p>
 
-    <form id="uploadForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <label class="block text-gray-700 mb-2 font-semibold">📷 اختر صورة:</label>
-        <input type="file" id="imageInput" accept="image/*"
-          class="file:mr-4 file:py-2 file:px-4
-                 file:rounded-full file:border-0
-                 file:text-sm file:font-semibold
-                 file:bg-blue-600 file:text-white
-                 hover:file:bg-blue-700
-                 block w-full text-gray-700 border rounded-lg p-2"/>
-      </div>
-
-      <div>
-        <label class="block text-gray-700 mb-2 font-semibold">📐 حجم القالب (عدد المربعات):</label>
-        <input type="number" id="gridSize" name="grid_size" value="40" min="10" max="200"
-          class="w-full border rounded-lg p-2"/>
-      </div>
-
-      <div>
-        <label class="block text-gray-700 mb-2 font-semibold">🧶 نوع الغرز:</label>
-        <select id="stitchType" name="stitch_type" class="w-full border rounded-lg p-2">
-          <option value="cross">Cross Stitch</option>
-          <option value="satin">Satin Stitch</option>
-          <option value="chain">Chain Stitch</option>
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-gray-700 mb-2 font-semibold">🪡 نوع القماش:</label>
-        <select id="fabricType" name="fabric_type" class="w-full border rounded-lg p-2">
-          <option value="Aida">Aida 14ct</option>
-          <option value="Linen">Linen</option>
-          <option value="Felt">Felt</option>
-        </select>
-      </div>
-
-      <div class="col-span-1 md:col-span-2 flex justify-center">
-        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition">
-          🚀 إنشاء القالب
-        </button>
-      </div>
-    </form>
-
-    <div id="previewSection" class="hidden mt-8 text-center">
-      <h2 class="text-xl font-semibold text-gray-700 mb-2">📑 معاينة:</h2>
-      <iframe id="pdfPreview" class="w-full h-96 border rounded-lg shadow"></iframe>
-      <a id="downloadLink" href="#" download="pattern.pdf"
-        class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg">
-        تحميل PDF
-      </a>
-    </div>
+<form id="uploadForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div>
+    <label class="block text-gray-700 mb-2 font-semibold">📷 اختر صورة:</label>
+    <input type="file" id="imageInput" accept="image/*"
+      class="file:mr-4 file:py-2 file:px-4
+             file:rounded-full file:border-0
+             file:text-sm file:font-semibold
+             file:bg-blue-600 file:text-white
+             hover:file:bg-blue-700
+             block w-full text-gray-700 border rounded-lg p-2"/>
   </div>
 
-  <script>
-    const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com"; // رابط السيرفر النهائي
+  <div>
+    <label class="block text-gray-700 mb-2 font-semibold">📐 حجم القالب:</label>
+    <input type="number" id="gridSize" name="grid_size" value="40" min="10" max="200" class="w-full border rounded-lg p-2"/>
+  </div>
 
-    const form = document.getElementById("uploadForm");
-    const imageInput = document.getElementById("imageInput");
-    const gridSize = document.getElementById("gridSize");
-    const stitchType = document.getElementById("stitchType");
-    const fabricType = document.getElementById("fabricType");
-    const previewSection = document.getElementById("previewSection");
-    const pdfPreview = document.getElementById("pdfPreview");
-    const downloadLink = document.getElementById("downloadLink");
+  <div>
+    <label class="block text-gray-700 mb-2 font-semibold">🧶 نوع الغرز:</label>
+    <select id="stitchType" name="stitch_type" class="w-full border rounded-lg p-2">
+      <option value="cross">Cross Stitch</option>
+      <option value="satin">Satin Stitch</option>
+      <option value="chain">Chain Stitch</option>
+    </select>
+  </div>
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!imageInput.files.length) {
-        alert("الرجاء اختيار صورة أولاً");
-        return;
-      }
+  <div>
+    <label class="block text-gray-700 mb-2 font-semibold">🪡 نوع القماش:</label>
+    <select id="fabricType" name="fabric_type" class="w-full border rounded-lg p-2">
+      <option value="Aida">Aida 14ct</option>
+      <option value="Linen">Linen</option>
+      <option value="Felt">Felt</option>
+    </select>
+  </div>
 
-      const formData = new FormData();
-      formData.append("image", imageInput.files[0]);
-      formData.append("grid_size", gridSize.value);
-      formData.append("stitch_type", stitchType.value);
-      formData.append("fabric_type", fabricType.value);
+  <div class="col-span-1 md:col-span-2 flex justify-center">
+    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition">
+      🚀 إنشاء القالب
+    </button>
+  </div>
+</form>
 
-      try {
-        const response = await fetch(`${SERVER_URL}/upload`, {
-          method: "POST",
-          body: formData,
-        });
+<div id="previewSection" class="hidden mt-8 text-center">
+  <h2 class="text-xl font-semibold text-gray-700 mb-2">📑 معاينة:</h2>
+  <iframe id="pdfPreview" class="w-full h-96 border rounded-lg shadow"></iframe>
+  <a id="downloadLink" href="#" download="pattern.pdf"
+     class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg">
+    تحميل PDF
+  </a>
+</div>
+</div>
 
-        if (!response.ok) {
-          alert("حصل خطأ أثناء إنشاء القالب");
-          return;
-        }
+<script>
+const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com";
 
+const form = document.getElementById("uploadForm");
+const imageInput = document.getElementById("imageInput");
+const gridSize = document.getElementById("gridSize");
+const stitchType = document.getElementById("stitchType");
+const fabricType = document.getElementById("fabricType");
+const previewSection = document.getElementById("previewSection");
+const pdfPreview = document.getElementById("pdfPreview");
+const downloadLink = document.getElementById("downloadLink");
+
+form.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if(!imageInput.files.length){ alert("الرجاء اختيار صورة أولاً"); return;}
+    const formData = new FormData();
+    formData.append("image", imageInput.files[0]);
+    formData.append("grid_size", gridSize.value);
+    formData.append("stitch_type", stitchType.value);
+    formData.append("fabric_type", fabricType.value);
+
+    try{
+        const response = await fetch(`${SERVER_URL}/upload`,{ method:"POST", body:formData });
+        if(!response.ok){ alert("حدث خطأ أثناء إنشاء القالب"); return;}
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-
         pdfPreview.src = url;
         downloadLink.href = url;
         previewSection.classList.remove("hidden");
-      } catch (err) {
-        console.error(err);
-        alert("خطأ في الاتصال بالسيرفر");
-      }
-    });
-  </script>
+    }catch(err){ console.error(err); alert("خطأ في الاتصال بالسيرفر"); }
+});
+</script>
 </body>
 </html>
