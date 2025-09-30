@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة رسم DST دقيقة</title>
+<title>لوحة رسم DST دقيقة مع شبكة</title>
 <style>
 body, html {
     margin:0;
@@ -84,7 +84,7 @@ button:hover {
 </style>
 </head>
 <body>
-<header>لوحة رسم DST دقيقة</header>
+<header>لوحة رسم DST دقيقة مع شبكة</header>
 <div id="main">
     <canvas id="board"></canvas>
 </div>
@@ -92,20 +92,32 @@ button:hover {
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">ارسم على اللوح لتصدير ملف DST مطابق تمامًا.</div>
+    <div class="warn">ارسم على اللوح لتصدير ملف DST مطابق تمامًا. الشبكة تظهر كل 5 مم.</div>
 </div>
 
 <script>
-// ====== إعداد الرسم ======
 const board = document.getElementById('board');
 const ctx = board.getContext('2d');
 let strokes = [];
 let current = [];
 let drawing = false;
 
-// نضبط التحجيم بحيث كل px على اللوح = 1mm تقريباً
 const BOARD_MM = 100; // اللوح يعادل 100 مم
 function pxToMM(px){ return px * (BOARD_MM / board.width); }
+function mmToPx(mm){ return mm * (board.width / BOARD_MM); }
+
+function drawGrid(){
+    const stepMM = 5; // كل 5 مم
+    const stepPx = mmToPx(stepMM);
+    ctx.strokeStyle = '#eee';
+    ctx.lineWidth = 1;
+    for(let x=0;x<=board.width;x+=stepPx){
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,board.height); ctx.stroke();
+    }
+    for(let y=0;y<=board.height;y+=stepPx){
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(board.width,y); ctx.stroke();
+    }
+}
 
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
@@ -121,6 +133,7 @@ board.addEventListener('touchend', e=>{ e.preventDefault(); end(); }, {passive:f
 
 function redraw(){
     ctx.clearRect(0,0,board.width,board.height);
+    drawGrid();
     ctx.lineWidth=2;
     ctx.strokeStyle='#000';
     ctx.lineJoin='round';
@@ -172,7 +185,7 @@ function encodeStep(dx,dy,control){
                     else if(w===81)b2|=(sign>0?0x20:0x40);
                 } else {
                     if(w===1)b0|=(sign>0?0x10:0x20);
-                    else if(w===9)b0|=(sign>0x40:0x80);
+                    else if(w===9)b0|=(sign>0?0x40:0x80);
                     else if(w===3)b1|=(sign>0?0x10:0x20);
                     else if(w===27)b1|=(sign>0?0x40:0x80);
                     else if(w===81)b2|=(sign>0?0x04:0x08);
@@ -192,7 +205,7 @@ function buildDST(strokes){
     const allPoints=[];
     for(const stroke of strokes){
         for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
-        allPoints.push(null); // نهاية اللون أو الخط
+        allPoints.push(null);
     }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
@@ -226,9 +239,12 @@ document.getElementById('export-dst').onclick=()=>{
     if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_precise.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_precise_grid.dst'; a.click();
     URL.revokeObjectURL(url);
 };
+
+// أول رسم عند تحميل الصفحة
+redraw();
 </script>
 </body>
 </html>
