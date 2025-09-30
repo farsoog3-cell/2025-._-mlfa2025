@@ -130,21 +130,25 @@
   });
 
   // Export a simple "DST-like" file. WARNING: this is NOT a full Tajima encoder.
+  // We'll produce a binary file that starts with a short human-readable header and then a compact list of relative stitch deltas.
   document.getElementById('export-dst').addEventListener('click',()=>{
+    // convert points to relative integers (0.1 mm units or pixels as-is)
     const all = [];
     for(const stroke of points){
       if(stroke.length===0) continue;
       for(const p of stroke) all.push([Math.round(p.x), Math.round(p.y)]);
+      // insert a command for jump/trim between strokes: represented as null separator
       all.push(null);
     }
     if(all.length===0){ alert('لا توجد غرز لتصدير — ارسم أولاً'); return; }
 
+    // compute relative deltas
     const deltas = [];
     let prev = all[0] || [0,0];
     let started=false;
     for(const item of all){
       if(item===null){ deltas.push({cmd:'TRIM'}); started=false; continue; }
-      if(!started){
+      if(!started){ // first stitch or after trim -> do a jump (move without stitching) and then stitch
         deltas.push({cmd:'JUMP', dx:item[0]-prev[0], dy:item[1]-prev[1]});
         prev = item; started=true; continue;
       }
@@ -154,7 +158,14 @@
       prev = item;
     }
 
-    const header = `SIMPLE-EMB-0.1\\nGenerated-by: simple-dst-generator\\nCreated: ${new Date().toISOString()}\\nNote: THIS IS A SIMPLIFIED/TEST FORMAT, NOT FULL TAJIMA DST.\\nEND_HEADER\\n`;
+    // build binary blob: header (text), then sequence of small records.
+    // record format (this simplified custom):
+    // - 1 byte: type (0x01 = JUMP, 0x02 = STITCH, 0x03 = TRIM)
+    // - for JUMP/STITCH: 2 bytes signed little-endian dx, 2 bytes signed little-endian dy
+    // This is NOT the Tajima DST binary format. It's a small, compact test format saved with .dst extension.
+
+    const header = `SIMPLE-EMB-0.1\nGenerated-by: simple-dst-generator\nCreated: ${new Date().toISOString()}\nNote: THIS IS A SIMPLIFIED/TEST FORMAT, NOT FULL TAJIMA DST.\nEND_HEADER\n`;
+    // estimate size
     let size = header.length;
     for(const r of deltas){
       size += 1;
@@ -163,7 +174,9 @@
     const buf = new ArrayBuffer(size);
     const view = new DataView(buf);
     let offset = 0;
+    // write header as ASCII
     for(let i=0;i<header.length;i++){ view.setUint8(offset++, header.charCodeAt(i)); }
+    // records
     for(const r of deltas){
       if(r.cmd==='JUMP'){
         view.setUint8(offset++, 0x01);
