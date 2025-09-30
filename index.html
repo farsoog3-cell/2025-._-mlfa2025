@@ -1,125 +1,135 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>محول التطريز DST التجريبي</title>
-<style>
-    body {
-        background-color: #111;
-        color: #fff;
-        font-family: Arial, sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        min-height: 100vh;
-        margin: 0;
-        padding: 20px;
-        box-sizing: border-box;
-    }
-    h1 {
-        margin-bottom: 20px;
-        text-align: center;
-    }
-    input, button {
-        margin: 10px 0;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 5px;
-        border: none;
-    }
-    canvas {
-        margin-top: 20px;
-        border: 2px solid #fff;
-        max-width: 100%;
-        height: auto;
-    }
-    .notice {
-        margin-top: 20px;
-        background-color: #222;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        max-width: 600px;
-    }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مولد قوالب التطريز</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gradient-to-br from-pink-100 to-blue-100 min-h-screen flex items-center justify-center p-6">
+  <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-3xl w-full">
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">🧵 مولد قوالب التطريز الاحترافي</h1>
+    <p class="text-center text-gray-600 mb-6">
+      ارفع صورة، اختر الإعدادات، واحصل على قالب تطريز مع قائمة الأدوات وملف PDF
+    </p>
 
-<h1>محول الصورة إلى تطريز DST التجريبي</h1>
-<input type="file" id="imageInput" accept="image/*">
-<button id="convertBtn">تحويل وعرض المخطط وتحميل DST</button>
-<canvas id="canvas"></canvas>
-<div class="notice">
-تنويه: هذا البرنامج يقوم بإنشاء ملف DST تقريبي للتجربة. لا يضمن تطابقًا احترافيًا مع جميع الماكينات.
-</div>
+    <form id="uploadForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-gray-700 mb-2 font-semibold">📷 اختر صورة:</label>
+        <input
+          type="file"
+          id="imageInput"
+          accept="image/*"
+          class="file:mr-4 file:py-2 file:px-4
+                 file:rounded-full file:border-0
+                 file:text-sm file:font-semibold
+                 file:bg-blue-600 file:text-white
+                 hover:file:bg-blue-700
+                 block w-full text-gray-700 border rounded-lg p-2"
+        />
+      </div>
 
-<script>
-const imageInput = document.getElementById('imageInput');
-const convertBtn = document.getElementById('convertBtn');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-let img = new Image();
+      <div>
+        <label class="block text-gray-700 mb-2 font-semibold">📐 حجم القالب (عدد المربعات):</label>
+        <input
+          type="number"
+          id="gridSize"
+          name="grid_size"
+          value="40"
+          min="10"
+          max="200"
+          class="w-full border rounded-lg p-2"
+        />
+      </div>
 
-imageInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        img.src = event.target.result;
-    }
-    reader.readAsDataURL(file);
-});
+      <div>
+        <label class="block text-gray-700 mb-2 font-semibold">🧶 نوع الغرز:</label>
+        <select id="stitchType" name="stitch_type" class="w-full border rounded-lg p-2">
+          <option value="cross">Cross Stitch</option>
+          <option value="satin">Satin Stitch</option>
+          <option value="chain">Chain Stitch</option>
+        </select>
+      </div>
 
-img.onload = function() {
-    const maxWidth = window.innerWidth * 0.9;
-    const maxHeight = window.innerHeight * 0.6;
-    let scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-}
+      <div>
+        <label class="block text-gray-700 mb-2 font-semibold">🪡 نوع القماش:</label>
+        <select id="fabricType" name="fabric_type" class="w-full border rounded-lg p-2">
+          <option value="Aida">Aida 14ct</option>
+          <option value="Linen">Linen</option>
+          <option value="Felt">Felt</option>
+        </select>
+      </div>
 
-function convertToDST() {
-    const width = canvas.width;
-    const height = canvas.height;
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const pixels = imageData.data;
+      <div class="col-span-1 md:col-span-2 flex justify-center">
+        <button
+          type="submit"
+          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+        >
+          🚀 إنشاء القالب
+        </button>
+      </div>
+    </form>
 
-    // إنشاء مخطط غرز تقريبي
-    let stitchMap = [];
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const i = (y * width + x) * 4;
-            const gray = 0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2];
-            if (gray < 128) { // الغرز السوداء
-                stitchMap.push([x, y]);
-            }
+    <div id="previewSection" class="hidden mt-8 text-center">
+      <h2 class="text-xl font-semibold text-gray-700 mb-2">📑 معاينة:</h2>
+      <iframe id="pdfPreview" class="w-full h-96 border rounded-lg shadow"></iframe>
+      <a
+        id="downloadLink"
+        href="#"
+        download="pattern.pdf"
+        class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg"
+      >
+        تحميل PDF
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("uploadForm");
+    const imageInput = document.getElementById("imageInput");
+    const gridSize = document.getElementById("gridSize");
+    const stitchType = document.getElementById("stitchType");
+    const fabricType = document.getElementById("fabricType");
+    const previewSection = document.getElementById("previewSection");
+    const pdfPreview = document.getElementById("pdfPreview");
+    const downloadLink = document.getElementById("downloadLink");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!imageInput.files.length) {
+        alert("الرجاء اختيار صورة أولاً");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", imageInput.files[0]);
+      formData.append("grid_size", gridSize.value);
+      formData.append("stitch_type", stitchType.value);
+      formData.append("fabric_type", fabricType.value);
+
+      try {
+        const response = await fetch("/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          alert("حصل خطأ أثناء إنشاء القالب");
+          return;
         }
-    }
 
-    // عرض المخطط على الشاشة
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = '#000';
-    stitchMap.forEach(p => ctx.fillRect(p[0], p[1], 1, 1));
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
 
-    // إنشاء ملف DST تقريبي
-    let dstHeader = "DST_HEADER_SIMULATION\n";
-    let dstBody = stitchMap.map(p => `${p[0]},${p[1]}\n`).join('');
-    let dstFile = dstHeader + dstBody;
-
-    const blob = new Blob([dstFile], { type: 'application/octet-stream' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'pattern.dst';
-    link.click();
-}
-
-convertBtn.addEventListener('click', convertToDST);
-</script>
-
+        pdfPreview.src = url;
+        downloadLink.href = url;
+        previewSection.classList.remove("hidden");
+      } catch (err) {
+        console.error(err);
+        alert("خطأ في الاتصال بالسيرفر");
+      }
+    });
+  </script>
 </body>
 </html>
