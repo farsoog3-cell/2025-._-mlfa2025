@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة رسم DST حديثة</title>
+<title>لوحة رسم DST دقيقة</title>
 <style>
 body, html {
     margin:0;
@@ -84,7 +84,7 @@ button:hover {
 </style>
 </head>
 <body>
-<header>لوحة رسم DST - حديثة ومرتبة</header>
+<header>لوحة رسم DST دقيقة</header>
 <div id="main">
     <canvas id="board"></canvas>
 </div>
@@ -92,7 +92,7 @@ button:hover {
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">ارسم على اللوح لتصدير ملف DST.</div>
+    <div class="warn">ارسم على اللوح لتصدير ملف DST مطابق تمامًا.</div>
 </div>
 
 <script>
@@ -103,9 +103,9 @@ let strokes = [];
 let current = [];
 let drawing = false;
 
-const DPI = 203;
-const MM_PER_INCH = 25.4;
-function pxToMM(px){ return px / DPI * MM_PER_INCH; }
+// نضبط التحجيم بحيث كل px على اللوح = 1mm تقريباً
+const BOARD_MM = 100; // اللوح يعادل 100 مم
+function pxToMM(px){ return px * (BOARD_MM / board.width); }
 
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
@@ -144,24 +144,6 @@ document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 // ===== DST =====
 const MAX_STEP = 10;
 
-function getBounds(strokes){
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-    for(const stroke of strokes){
-        for(const p of stroke){
-            if(p.x<minX) minX=p.x;
-            if(p.y<minY) minY=p.y;
-            if(p.x>maxX) maxX=p.x;
-            if(p.y>maxY) maxY=p.y;
-        }
-    }
-    return {minX,minY,maxX,maxY};
-}
-
-function normalizeStrokes(strokes){
-    const {minX,minY} = getBounds(strokes);
-    return strokes.map(stroke=>stroke.map(p=>({x:p.x-minX,y:p.y-minY})));
-}
-
 function splitStep(dx,dy){
     const steps=[];
     let rx=dx, ry=dy;
@@ -190,7 +172,7 @@ function encodeStep(dx,dy,control){
                     else if(w===81)b2|=(sign>0?0x20:0x40);
                 } else {
                     if(w===1)b0|=(sign>0?0x10:0x20);
-                    else if(w===9)b0|=(sign>0?0x40:0x80);
+                    else if(w===9)b0|=(sign>0x40:0x80);
                     else if(w===3)b1|=(sign>0?0x10:0x20);
                     else if(w===27)b1|=(sign>0?0x40:0x80);
                     else if(w===81)b2|=(sign>0?0x04:0x08);
@@ -207,11 +189,10 @@ function encodeStep(dx,dy,control){
 }
 
 function buildDST(strokes){
-    const normalized = normalizeStrokes(strokes);
     const allPoints=[];
-    for(const stroke of normalized){
+    for(const stroke of strokes){
         for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
-        allPoints.push(null);
+        allPoints.push(null); // نهاية اللون أو الخط
     }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
@@ -245,7 +226,7 @@ document.getElementById('export-dst').onclick=()=>{
     if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_preview.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_precise.dst'; a.click();
     URL.revokeObjectURL(url);
 };
 </script>
