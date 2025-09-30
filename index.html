@@ -3,76 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Embroidery Generator</title>
+<title>محول التطريز DST</title>
 <style>
-  body { background-color: #121212; color: #f0f0f0; font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
-  h1 { color: #00ff99; }
-  input, button { margin: 10px; padding: 10px; border-radius: 8px; border:none; font-size:16px; }
-  input[type=file] { background-color: #333; color: #fff; }
-  button { background-color: #00ff99; color:#121212; cursor:pointer; }
-  button:disabled { background-color: #555; cursor: not-allowed; }
-  #status { margin-top: 20px; font-weight:bold; }
+    body {
+        background-color: #111;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+    h1 {
+        margin-bottom: 20px;
+    }
+    input, button {
+        margin: 10px 0;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: none;
+    }
+    canvas {
+        margin-top: 20px;
+        border: 2px solid #fff;
+    }
+    .notice {
+        margin-top: 20px;
+        background-color: #222;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        max-width: 600px;
+    }
 </style>
 </head>
 <body>
 
-<h1>AI Embroidery Generator</h1>
+<h1>محول الصورة إلى تطريز DST</h1>
 <input type="file" id="imageInput" accept="image/*">
-<button id="startBtn">ابدأ المعالجة</button>
-<button id="downloadBtn" disabled>تحميل الملف</button>
-<div id="status"></div>
+<button id="convertBtn">تحويل وتحميل DST</button>
+<canvas id="canvas"></canvas>
+<div class="notice">
+تنويه: هذا البرنامج يقوم بإنشاء مخطط تطريز قابل للتكريز. تأكد من أن لديك الحق في استخدام الصورة.
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.0/dist/jszip.min.js"></script>
 <script>
-const startBtn = document.getElementById('startBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const status = document.getElementById('status');
-let lastBlob = null;
+const imageInput = document.getElementById('imageInput');
+const convertBtn = document.getElementById('convertBtn');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let img = new Image();
 
-startBtn.addEventListener('click', async () => {
-    const fileInput = document.getElementById('imageInput');
-    if (!fileInput.files.length) { alert('يرجى اختيار صورة'); return; }
-
-    startBtn.disabled = true;
-    status.textContent = '⏳ جاري المعالجة...';
-    downloadBtn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('image', fileInput.files[0]);
-
-    try {
-        const response = await fetch('https://2025mlfa-2-7e2x.onrender.com/generate_dst_from_image', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            status.textContent = '❌ خطأ: ' + (error.error || 'فشل الاتصال بالسيرفر');
-            startBtn.disabled = false;
-            return;
-        }
-
-        const blob = await response.blob();
-        lastBlob = blob;
-        status.textContent = '✅ تم الانتهاء! يمكنك تحميل الملف.';
-        downloadBtn.disabled = false;
-
-    } catch (err) {
-        status.textContent = '❌ خطأ في الاتصال بالخادم: ' + err.message;
-    } finally {
-        startBtn.disabled = false;
+imageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        img.src = event.target.result;
     }
+    reader.readAsDataURL(file);
 });
 
-downloadBtn.addEventListener('click', () => {
-    if (!lastBlob) return;
-    const url = URL.createObjectURL(lastBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ai_stitch.dst';
-    a.click();
-    URL.revokeObjectURL(url);
-});
+img.onload = function() {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+}
+
+function convertToDST() {
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const pixels = imageData.data;
+
+    // إنشاء بيانات DST بسيطة
+    let dstData = [];
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            const gray = 0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2];
+            if (gray < 128) { // لون أسود يعني غرزة
+                dstData.push([x, y]);
+            }
+        }
+    }
+
+    // إنشاء ملف DST (نسخة بسيطة جدًا)
+    let dstFile = "DST_HEADER_PLACEHOLDER"; // تحتاج مكتبة حقيقية لـ DST الحقيقي
+    dstFile += dstData.map(p => `${p[0]},${p[1]}\n`).join('');
+
+    const blob = new Blob([dstFile], { type: 'application/octet-stream' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'pattern.dst';
+    link.click();
+}
+
+convertBtn.addEventListener('click', convertToDST);
 </script>
 
 </body>
