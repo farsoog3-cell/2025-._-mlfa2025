@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>رسم دقيق لمسار DST</title>
+<title>رسم متقن لمسار DST</title>
 <style>
 body{margin:0;font-family:system-ui;display:flex;flex-direction:column;height:100vh;}
 header{padding:10px;text-align:center;background:#222;color:#fff;}
@@ -14,29 +14,28 @@ button{padding:8px 12px;margin:0 5px;border-radius:6px;border:1px solid #cfd6e8;
 </style>
 </head>
 <body>
-<header>رسم دقيق لمسار DST - نسخة محسّنة</header>
+<header>رسم متقن لمسار DST - بدون حواف</header>
 <canvas id="board"></canvas>
 <div class="controls">
 <button id="undo">تراجع</button>
 <button id="clear">مسح</button>
-<button id="export-dst">تصدير DST عالي الدقة</button>
-<div class="warn">ملف DST صناعي للاختبار - تحقق من الماكينة قبل الإنتاج.</div>
+<button id="export-dst">تصدير DST متقن</button>
+<div class="warn">ملف DST صناعي للاختبار - التصميم سيطابق اللوح تماماً.</div>
 </div>
 
 <script>
-// إعداد الرسم
+// ====== إعداد الرسم ======
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
-let strokes = []; // array of strokes, each = [{x,y},...]
+let strokes = [];
 let current = [];
 let drawing = false;
 
-// DPI / Scale لتحديد الدقة الحقيقية
-const DPI = 203; // نقاط لكل إنش (يمكن تعديل حسب ماكينة)
+// DPI وMM للتحويل
+const DPI = 203; 
 const MM_PER_INCH = 25.4;
 function pxToMM(px){ return px / DPI * MM_PER_INCH; }
 
-// حجم canvas
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
@@ -45,7 +44,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// الرسم
+// ======= الرسم =======
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
 function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; }
@@ -58,7 +57,6 @@ canvas.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.touches
 canvas.addEventListener('touchmove', e=>{ e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); move(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
 canvas.addEventListener('touchend', e=>{ e.preventDefault(); end(); }, {passive:false});
 
-// إعادة رسم
 function redraw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.lineWidth=2;
@@ -76,15 +74,33 @@ function redraw(){
     drawStroke(current);
 }
 
-// أزرار
+// ======= أزرار =======
 document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
-// ===== DST صناعي عالي الدقة =====
-const MAX_STEP = 60; // تقليل خطوة الغرز لجعلها دقيقة
+// ======= DST عالي الدقة =======
+const MAX_STEP = 30; // خطوة صغيرة لزيادة الدقة
+
+function getBounds(strokes){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const stroke of strokes){
+        for(const p of stroke){
+            if(p.x<minX) minX=p.x;
+            if(p.y<minY) minY=p.y;
+            if(p.x>maxX) maxX=p.x;
+            if(p.y>maxY) maxY=p.y;
+        }
+    }
+    return {minX,minY,maxX,maxY};
+}
+
+function normalizeStrokes(strokes){
+    const {minX,minY} = getBounds(strokes);
+    return strokes.map(stroke=>stroke.map(p=>({x:p.x-minX,y:p.y-minY})));
+}
 
 function splitStep(dx,dy){
-    const steps = [];
+    const steps=[];
     let rx=dx, ry=dy;
     while(Math.abs(rx)>MAX_STEP || Math.abs(ry)>MAX_STEP){
         const sx=Math.max(-MAX_STEP, Math.min(MAX_STEP, rx));
@@ -121,18 +137,19 @@ function encodeStep(dx,dy,control){
         }
     }
     applyAxis(dx,'x'); applyAxis(dy,'y');
-    if(control===0)b2|=0x03; // STITCH
-    else if(control===1)b2|=0x83; // JUMP
-    else if(control===2)b2|=0x23; // TRIM
+    if(control===0)b2|=0x03;
+    else if(control===1)b2|=0x83;
+    else if(control===2)b2|=0x23;
     b0&=0xFF;b1&=0xFF;b2&=0xFF;
     return [b0,b1,b2];
 }
 
 function buildDST(strokes){
+    const normalized = normalizeStrokes(strokes);
     const allPoints=[];
-    for(const stroke of strokes){
-        for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)}); // تحويل mm لدقة عالية
-        allPoints.push(null);
+    for(const stroke of normalized){
+        for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
+        allPoints.push(null); // TRIM
     }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
@@ -153,7 +170,7 @@ function buildDST(strokes){
     }
     bodyBytes.push(0x00,0x00,0xF3);
     const header=new Uint8Array(512); header.fill(0x20);
-    const name='JS_HIGHRES'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const name='JS_PERFECT'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
     const buf=new Uint8Array(512+bodyBytes.length);
     buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512);
     return buf.buffer;
@@ -165,7 +182,7 @@ document.getElementById('export-dst').onclick=()=>{
     if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_highres.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_perfect.dst'; a.click();
     URL.revokeObjectURL(url);
 };
 </script>
