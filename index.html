@@ -1,173 +1,58 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>AI تحويل الصورة إلى تطريز DST — متقدم</title>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<meta charset="UTF-8">
+<title>استخراج معلومات DST</title>
 <style>
-  :root { --bg:#0b0b0b; --card:#111; --accent:#00d27a; --muted:#888; }
-  body{margin:0;background:var(--bg);color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;}
-  header{padding:20px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03)}
-  .container{max-width:980px;margin:24px auto;padding:20px;background:var(--card);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
-  h1{margin:6px 0;font-size:1.3rem}
-  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;margin:14px 0}
-  input[type=file]{background:transparent;color:#fff;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06)}
-  input[type=text]{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff;width:220px}
-  button{background:var(--accent);color:#002;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
-  button:disabled{opacity:0.5;cursor:not-allowed}
-  .row{display:flex;gap:12px}
-  .panel{flex:1;background:#0c0c0c;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
-  #previewCanvas{width:100%;height:auto;border-radius:8px;background:#fff;margin-top:10px}
-  .swatch{display:inline-block;width:20px;height:20px;border-radius:4px;margin-right:6px;border:1px solid rgba(255,255,255,0.08)}
-  .log{font-family:monospace;font-size:0.85rem;color:var(--muted);max-height:160px;overflow:auto;padding:8px;background:rgba(255,255,255,0.01);border-radius:6px}
-  .stats{font-size:0.95rem}
-  footer{padding:12px;text-align:center;color:var(--muted)}
+body { font-family:sans-serif; background:#111; color:#fff; padding:20px; }
+button { padding:10px 15px; margin:5px; cursor:pointer; }
+textarea { width:100%; height:300px; margin-top:10px; background:#222; color:#fff; }
 </style>
 </head>
 <body>
-<header>
-  <h1><i class="fa-solid fa-pen-nib"></i> AI تحويل الصورة إلى تطريز DST — متكامل</h1>
-  <div style="font-size:0.9rem;color:var(--muted)">ارفع صورة، اضغط ابدأ، انتظر انتهاء المعالجة ثم نزّل ملف DST</div>
-</header>
 
-<div class="container">
-  <div class="controls">
-    <input id="imageInput" type="file" accept="image/*">
-    <input id="fileName" type="text" placeholder="اسم الملف (اختياري)">
-    <button id="startBtn"><i class="fa-solid fa-play"></i> ابدأ المعالجة</button>
-    <button id="downloadBtn" disabled><i class="fa-solid fa-download"></i> تنزيل الملف</button>
-  </div>
+<h2>رفع ملف DST لاستخراج المعلومات</h2>
+<input type="file" id="dstFile" accept=".dst,.pes">
+<button id="extractBtn">استخراج المعلومات</button>
+<button id="copyBtn">نسخ المعلومات</button>
 
-  <div class="row" style="margin-top:12px">
-    <div class="panel" style="flex:1">
-      <h3>معاينة</h3>
-      <canvas id="previewCanvas"></canvas>
-      <div id="status" style="margin-top:8px;font-weight:700;color:#9ff"></div>
-    </div>
+<textarea id="output" placeholder="ستظهر المعلومات هنا..." readonly></textarea>
 
-    <div style="width:340px">
-      <div class="panel">
-        <h4>لوحة التحكم</h4>
-        <div id="console" class="log"></div>
-      </div>
-      <div class="panel" style="margin-top:10px">
-        <h4>إحصائيات</h4>
-        <div id="stats" class="stats">عدد الغرز: — <br> ألوان: — </div>
-        <div id="colors" style="margin-top:8px"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<footer>تأكد من وضع ملف <code>sample.dst</code> على الخادم قبل التشغيل</footer>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.0/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
 
 <script>
-const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/generate_dst_from_image"; // عدّل حسب سيرفرك
-const imageInput = document.getElementById('imageInput');
-const fileNameInput = document.getElementById('fileName');
-const startBtn = document.getElementById('startBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const consoleEl = document.getElementById('console');
-const statsEl = document.getElementById('stats');
-const colorsEl = document.getElementById('colors');
-const previewCanvas = document.getElementById('previewCanvas');
-const previewCtx = previewCanvas.getContext('2d');
-let generatedBlob = null;
+let extractedData = {};
 
-function log(msg){ const time = new Date().toLocaleTimeString(); consoleEl.innerHTML += `[${time}] ${msg}\n`; consoleEl.scrollTop = consoleEl.scrollHeight; }
-function setStatus(txt, ok=true){ const s = document.getElementById('status'); s.textContent = txt; s.style.color = ok ? '#9ff' : '#f66'; }
+document.getElementById('extractBtn').onclick = async function() {
+  const fileInput = document.getElementById('dstFile');
+  if(!fileInput.files.length) { alert('اختر ملف DST أولاً'); return; }
+  const file = fileInput.files[0];
 
-function renderPreviewFromImageFile(file){
-  const img = new Image();
-  img.onload = function(){
-    previewCanvas.width = Math.min(img.width, 800);
-    const ratio = img.height / img.width;
-    previewCanvas.height = Math.round(previewCanvas.width * ratio);
-    previewCtx.clearRect(0,0,previewCanvas.width,previewCanvas.height);
-    previewCtx.drawImage(img,0,0,previewCanvas.width,previewCanvas.height);
-  };
-  img.src = URL.createObjectURL(file);
-}
+  // قراءة الملف كـ ArrayBuffer
+  const buffer = await file.arrayBuffer();
 
-imageInput.addEventListener('change', (e) => {
-  if(e.target.files && e.target.files[0]) renderPreviewFromImageFile(e.target.files[0]);
-});
+  // هنا نحتاج مكتبة pyembroidery لكن في المتصفح لا تعمل، 
+  // لذا سنرسل الملف إلى خادم Python صغير يقوم بالتحليل ثم يرجع JSON.
+  
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  const res = await fetch("http://localhost:5000/extract_dst_info", {
+    method:"POST",
+    body: formData
+  });
+  const data = await res.json();
+  extractedData = data;
+  document.getElementById('output').value = JSON.stringify(data, null, 2);
+};
 
-startBtn.addEventListener('click', async ()=>{
-  const f = imageInput.files[0];
-  if(!f){ alert('يرجى رفع صورة أولاً'); return; }
-  generatedBlob = null;
-  downloadBtn.disabled = true;
-  setStatus('⏳ جاري إرسال الصورة والمعالجة...');
-  log('إرسال الصورة إلى الخادم...');
-  const fd = new FormData();
-  fd.append('image', f);
-  try{
-    const start = performance.now();
-    const res = await fetch(SERVER_URL, { method:'POST', body: fd });
-    log('تم استلام استجابة من الخادم: ' + res.status);
-    if(!res.ok){
-      const text = await res.text();
-      throw new Error(text || 'استجابة غير ناجحة');
-    }
-    // قراءة هيدر الألوان
-    const header = res.headers.get('X-Colors-Info');
-    let colors = [];
-    try{ colors = JSON.parse(header || '[]'); } catch(e){ log('خطأ تحويل الهيدر ل JSON: '+e); }
-    // عرض الألوان
-    colorsEl.innerHTML = '';
-    let totalStitches = 0;
-    colors.forEach(c=>{
-      totalStitches += (c.stitches||0);
-      const div = document.createElement('div');
-      div.style.display='flex'; div.style.alignItems='center'; div.style.marginBottom='6px';
-      const sw = document.createElement('span'); sw.className='swatch'; sw.style.background = c.hex;
-      const txt = document.createElement('span'); txt.style.marginLeft='8px'; txt.textContent = `${c.hex} — غرز: ${c.stitches}`;
-      div.appendChild(sw); div.appendChild(txt); colorsEl.appendChild(div);
-    });
-    statsEl.innerHTML = `عدد الغرز التقريبي: ${totalStitches} <br> عدد الألوان: ${colors.length}`;
-
-    // معاينة بسيطة (فللأغراض العرض نرسم مربعات حسب الألوان)
-    previewCtx.clearRect(0,0,previewCanvas.width,previewCanvas.height);
-    previewCtx.fillStyle = '#fff'; previewCtx.fillRect(0,0,previewCanvas.width,previewCanvas.height);
-    if(colors.length){
-      const blockW = Math.max(4, Math.floor(previewCanvas.width / Math.max(1, Math.sqrt(totalStitches||1))));
-      let x=0,y=0;
-      colors.forEach(c=>{
-        previewCtx.fillStyle=c.hex;
-        const cnt = Math.max(4, Math.floor(Math.sqrt(c.stitches||16)));
-        for(let i=0;i<cnt;i++){
-          previewCtx.fillRect(x, y, 2, 2);
-          x += 2;
-          if(x > previewCanvas.width-4){ x = 0; y += 3; }
-        }
-      });
-    }
-
-    // نحصل على البلووب
-    const blob = await res.blob();
-    generatedBlob = blob;
-    downloadBtn.disabled = false;
-    setStatus('✅ انتهت المعالجة، يمكنك تنزيل الملف الآن.');
-    const took = ((performance.now()-start)/1000).toFixed(2);
-    log(`انتهت المعالجة بنجاح في ${took} ثانية. الملف جاهز للتنزيل.`);
-  }catch(err){
-    console.error(err);
-    setStatus('❌ فشل أثناء المعالجة. افتح الكونسول للمزيد.', false);
-    log('خطأ: ' + (err.message || err));
-  }
-});
-
-downloadBtn.addEventListener('click', ()=>{
-  if(!generatedBlob) return;
-  const fname = (fileNameInput.value || 'ai_stitch') + '.dst';
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(generatedBlob);
-  a.download = fname;
-  a.click();
-  log('بدأ تنزيل الملف: ' + fname);
-});
+document.getElementById('copyBtn').onclick = function() {
+  if(!extractedData || !Object.keys(extractedData).length) return;
+  navigator.clipboard.writeText(JSON.stringify(extractedData, null, 2));
+  alert('تم نسخ المعلومات!');
+};
 </script>
 </body>
 </html>
