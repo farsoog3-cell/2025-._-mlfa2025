@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>محول التطريز DST</title>
+<title>محول التطريز DST التجريبي</title>
 <style>
     body {
         background-color: #111;
@@ -47,15 +47,14 @@
 </head>
 <body>
 
-<h1>محول الصورة إلى تطريز DST</h1>
+<h1>محول الصورة إلى تطريز DST التجريبي</h1>
 <input type="file" id="imageInput" accept="image/*">
-<button id="convertBtn">تحويل وعرض مخطط وتحميل DST</button>
+<button id="convertBtn">تحويل وعرض المخطط وتحميل DST</button>
 <canvas id="canvas"></canvas>
 <div class="notice">
-تنويه: هذا البرنامج يقوم بإنشاء مخطط تطريز قابل للتكريز. تأكد من أن لديك الحق في استخدام الصورة.
+تنويه: هذا البرنامج يقوم بإنشاء ملف DST تقريبي للتجربة. لا يضمن تطابقًا احترافيًا مع جميع الماكينات.
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.0/dist/jszip.min.js"></script>
 <script>
 const imageInput = document.getElementById('imageInput');
 const convertBtn = document.getElementById('convertBtn');
@@ -88,43 +87,29 @@ function convertToDST() {
     const imageData = ctx.getImageData(0, 0, width, height);
     const pixels = imageData.data;
 
-    // إنشاء نسخة من الصورة لتحويلها إلى مخطط أبيض وأسود
-    let bwCanvas = document.createElement('canvas');
-    bwCanvas.width = width;
-    bwCanvas.height = height;
-    let bwCtx = bwCanvas.getContext('2d');
-
-    bwCtx.fillStyle = '#fff';
-    bwCtx.fillRect(0, 0, width, height);
-
-    bwCtx.fillStyle = '#000';
+    // إنشاء مخطط غرز تقريبي
+    let stitchMap = [];
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const i = (y * width + x) * 4;
             const gray = 0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2];
-            if (gray < 128) {
-                bwCtx.fillRect(x, y, 1, 1);
+            if (gray < 128) { // الغرز السوداء
+                stitchMap.push([x, y]);
             }
         }
     }
 
-    // عرض المخطط قبل التنزيل
+    // عرض المخطط على الشاشة
     ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(bwCanvas, 0, 0);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#000';
+    stitchMap.forEach(p => ctx.fillRect(p[0], p[1], 1, 1));
 
-    // إنشاء بيانات DST (نسخة مبسطة)
-    let dstData = [];
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const pixel = bwCtx.getImageData(x, y, 1, 1).data;
-            if (pixel[0] === 0) { // لون أسود يعني غرزة
-                dstData.push([x, y]);
-            }
-        }
-    }
-
-    let dstFile = "DST_HEADER_PLACEHOLDER";
-    dstFile += dstData.map(p => `${p[0]},${p[1]}\n`).join('');
+    // إنشاء ملف DST تقريبي
+    let dstHeader = "DST_HEADER_SIMULATION\n";
+    let dstBody = stitchMap.map(p => `${p[0]},${p[1]}\n`).join('');
+    let dstFile = dstHeader + dstBody;
 
     const blob = new Blob([dstFile], { type: 'application/octet-stream' });
     const link = document.createElement('a');
