@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة رسم DST دقيقة 100%</title>
+<title>لوحة رسم DST دقيقة ومرنة</title>
 <style>
 body, html { margin:0; padding:0; height:100%; width:100%; font-family: 'Segoe UI', sans-serif; display:flex; flex-direction:column; background: #f0f2f5;}
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding: 15px 0; font-size: 1.4em; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.2);}
@@ -17,13 +17,13 @@ button:hover { background:#182848;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST دقيقة 100%</header>
+<header>لوحة رسم DST دقيقة ومرنة</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">كل ما ترسمه سيظهر في ملف DST بدقة 100%.</div>
+    <div class="warn">كل ما ترسمه سيظهر في ملف DST بدقة عالية.</div>
 </div>
 
 <script>
@@ -32,7 +32,7 @@ const ctx = board.getContext('2d');
 let strokes=[], current=[], drawing=false;
 
 // ===== إعداد التحجيم =====
-let BOARD_MM = 200;  // زيادة عدد المليمترات لتحسين الدقة
+let BOARD_MM = 200;  
 let PX_PER_MM = 1;
 
 function resizeCanvas(){
@@ -42,7 +42,6 @@ function resizeCanvas(){
     redraw();
 }
 
-// التأكد من أن الكانفاس جاهز بعد تحميل الصفحة
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
 
@@ -61,7 +60,14 @@ function drawGrid(){
 
 // ===== أحداث الرسم =====
 function start(x,y){ drawing=true; current=[{x,y}]; }
-function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
+function move(x,y){ if(!drawing) return; 
+    const last = current[current.length-1];
+    // تجاهل النقاط القريبة جدًا لتجنب مشاكل الخطوط المستقيمة
+    const dx = x - last.x, dy = y - last.y;
+    if(Math.sqrt(dx*dx + dy*dy) < 0.5) return;
+    current.push({x,y}); 
+    redraw(); 
+}
 function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; redraw(); }
 
 board.addEventListener('mousedown', e=>{ const r=board.getBoundingClientRect(); start(e.clientX-r.left,e.clientY-r.top); });
@@ -89,7 +95,7 @@ document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
 // ===== DST الذكي =====
-const MAX_STEP = 0.5; // تقليل الخطوة لتحسين الدقة
+const MAX_STEP = 1; // زيادة خطوة قليلاً للرسم الحر
 
 function splitStep(dx,dy){
     const steps=[]; let rx=dx, ry=dy;
