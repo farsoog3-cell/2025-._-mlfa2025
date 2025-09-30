@@ -3,43 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>رسم متقن لمسار DST</title>
+<title>رسم متقن لمسار DST + معاينة</title>
 <style>
 body{margin:0;font-family:system-ui;display:flex;flex-direction:column;height:100vh;}
 header{padding:10px;text-align:center;background:#222;color:#fff;}
-canvas{flex:1;display:block;border-top:4px solid #ccc;touch-action:none;}
+#main{flex:1;display:flex;flex-direction:row;}
+canvas{border-top:4px solid #ccc;touch-action:none;}
+#board{flex:1;}
+#preview{width:300px;border-left:2px solid #aaa;background:#f0f0f0;}
 .controls{padding:10px;text-align:center;background:#f7f7fb;}
 button{padding:8px 12px;margin:0 5px;border-radius:6px;border:1px solid #cfd6e8;background:#fff;}
 .warn{color:#a00;font-size:13px;margin-top:6px;}
 </style>
 </head>
 <body>
-<header>رسم متقن لمسار DST - نسخة احترافية</header>
+<header>رسم متقن لمسار DST - معاينة حية</header>
+<div id="main">
 <canvas id="board"></canvas>
+<canvas id="preview"></canvas>
+</div>
 <div class="controls">
 <button id="undo">تراجع</button>
 <button id="clear">مسح</button>
 <button id="export-dst">تصدير DST متقن</button>
-<div class="warn">الملف الناتج سيطابق الرسم على اللوح تمامًا.</div>
+<div class="warn">سترى الرسم في معاينة DST فورًا. الملف الناتج سيطابقه تمامًا.</div>
 </div>
 
 <script>
 // ====== إعداد الرسم ======
-const canvas = document.getElementById('board');
-const ctx = canvas.getContext('2d');
+const board = document.getElementById('board');
+const ctx = board.getContext('2d');
+const preview = document.getElementById('preview');
+const ctxPreview = preview.getContext('2d');
 let strokes = [];
 let current = [];
 let drawing = false;
 
-// DPI / MM
+// DPI و MM
 const DPI = 203;
 const MM_PER_INCH = 25.4;
 function pxToMM(px){ return px / DPI * MM_PER_INCH; }
 
-// حجم اللوح
 function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
+    board.width = window.innerWidth - 300;
+    board.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
+    preview.width = 300;
+    preview.height = board.height;
     redraw();
 }
 window.addEventListener('resize', resize);
@@ -48,18 +57,18 @@ resize();
 // ===== الرسم =====
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
-function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; }
+function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; redraw(); }
 
-canvas.addEventListener('mousedown', e=>{ const r=canvas.getBoundingClientRect(); start(e.clientX-r.left,e.clientY-r.top); });
-window.addEventListener('mousemove', e=>{ if(!drawing) return; const r=canvas.getBoundingClientRect(); move(e.clientX-r.left,e.clientY-r.top); });
+board.addEventListener('mousedown', e=>{ const r=board.getBoundingClientRect(); start(e.clientX-r.left,e.clientY-r.top); });
+window.addEventListener('mousemove', e=>{ if(!drawing) return; const r=board.getBoundingClientRect(); move(e.clientX-r.left,e.clientY-r.top); });
 window.addEventListener('mouseup', end);
 
-canvas.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); start(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
-canvas.addEventListener('touchmove', e=>{ e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); move(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
-canvas.addEventListener('touchend', e=>{ e.preventDefault(); end(); }, {passive:false});
+board.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.touches[0]; const r=board.getBoundingClientRect(); start(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
+board.addEventListener('touchmove', e=>{ e.preventDefault(); const t=e.touches[0]; const r=board.getBoundingClientRect(); move(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
+board.addEventListener('touchend', e=>{ e.preventDefault(); end(); }, {passive:false});
 
 function redraw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,board.width,board.height);
     ctx.lineWidth=2;
     ctx.strokeStyle='#000';
     ctx.lineJoin='round';
@@ -73,6 +82,7 @@ function redraw(){
     }
     for(const s of strokes) drawStroke(s);
     drawStroke(current);
+    updatePreview();
 }
 
 // ===== أزرار =====
@@ -80,17 +90,19 @@ document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
 // ===== DST =====
-const MAX_STEP = 10; // دقة عالية جدًا
+const MAX_STEP = 10;
 
 function getBounds(strokes){
-    let minX=Infinity,minY=Infinity;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(const stroke of strokes){
         for(const p of stroke){
             if(p.x<minX) minX=p.x;
             if(p.y<minY) minY=p.y;
+            if(p.x>maxX) maxX=p.x;
+            if(p.y>maxY) maxY=p.y;
         }
     }
-    return {minX,minY};
+    return {minX,minY,maxX,maxY};
 }
 
 function normalizeStrokes(strokes){
@@ -168,19 +180,42 @@ function buildDST(strokes){
     }
     bodyBytes.push(0x00,0x00,0xF3);
     const header=new Uint8Array(512); header.fill(0x20);
-    const name='JS_PERFECT'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const name='JS_PREVIEW'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
     const buf=new Uint8Array(512+bodyBytes.length);
     buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512);
     return buf.buffer;
 }
 
+// ===== معاينة حية =====
+function updatePreview(){
+    ctxPreview.clearRect(0,0,preview.width,preview.height);
+    ctxPreview.strokeStyle='#f00';
+    ctxPreview.lineWidth=1;
+    ctxPreview.lineJoin='round';
+    ctxPreview.lineCap='round';
+    const normalized = normalizeStrokes(strokes.concat(current));
+    // حساب مقياس ليظهر داخل preview
+    const {maxX,maxY} = getBounds(normalized);
+    const scaleX = preview.width / (maxX||preview.width);
+    const scaleY = preview.height / (maxY||preview.height);
+    const scale = Math.min(scaleX,scaleY);
+    for(const stroke of normalized){
+        if(stroke.length<2) continue;
+        ctxPreview.beginPath();
+        ctxPreview.moveTo(stroke[0].x*scale, stroke[0].y*scale);
+        for(let i=1;i<stroke.length;i++) ctxPreview.lineTo(stroke[i].x*scale, stroke[i].y*scale);
+        ctxPreview.stroke();
+    }
+}
+
+// ===== تصدير =====
 document.getElementById('export-dst').onclick=()=>{
     if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
     const buf=buildDST(strokes);
     if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_perfect.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_preview.dst'; a.click();
     URL.revokeObjectURL(url);
 };
 </script>
