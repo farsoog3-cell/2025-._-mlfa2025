@@ -2,59 +2,100 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>استخراج معلومات DST/PES</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Embroidery Generator</title>
 <style>
-body { font-family:sans-serif; background:#111; color:#fff; padding:20px; }
-button { padding:10px 15px; margin:5px; cursor:pointer; }
-#previewCanvas { display:none; } /* نخفي المعاينة */
+    body {
+        background-color: #111;
+        color: #eee;
+        font-family: "Arial", sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+    h1 {
+        margin-bottom: 20px;
+        font-weight: 400;
+    }
+    input[type="file"] {
+        margin: 20px 0;
+    }
+    button {
+        background-color: #222;
+        color: #eee;
+        border: 2px solid #eee;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+        border-radius: 5px;
+    }
+    button:hover {
+        background-color: #eee;
+        color: #111;
+        border-color: #111;
+    }
+    #colors-info {
+        margin-top: 20px;
+    }
+    .color-box {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        margin: 2px;
+        border: 1px solid #eee;
+    }
 </style>
 </head>
 <body>
+<h1>تحويل الصورة إلى تطريز باستخدام AI</h1>
+<input type="file" id="imageInput" accept="image/*">
+<button onclick="uploadImage()">رفع وتحويل</button>
 
-<h2>رفع ملف DST/PES لاستخراج المعلومات</h2>
-<input type="file" id="dstFile" accept=".dst,.pes">
-<button id="extractBtn">استخراج المعلومات</button>
-<button id="downloadBtn" disabled>تنزيل JSON</button>
+<div id="colors-info"></div>
 
 <script>
-const SERVER_URL = "https://2025mlfa-2-7e2x.onrender.com/extract_dst_info";
-
-let extractedData = {};
-
-document.getElementById('extractBtn').onclick = async function() {
-  const fileInput = document.getElementById('dstFile');
-  if(!fileInput.files.length) { alert('اختر ملف DST أولاً'); return; }
-  const file = fileInput.files[0];
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const res = await fetch(SERVER_URL, { method:"POST", body: formData });
-    if(!res.ok) {
-      const text = await res.text();
-      throw new Error(text || 'حدث خطأ أثناء إرسال الملف');
+function uploadImage() {
+    const fileInput = document.getElementById('imageInput');
+    if (fileInput.files.length === 0) {
+        alert("اختر صورة أولاً");
+        return;
     }
-    extractedData = await res.json();
-    // تفعيل زر التنزيل بعد نجاح العملية
-    document.getElementById('downloadBtn').disabled = false;
-    alert('تم استخراج المعلومات، الملف جاهز للتنزيل!');
-  } catch(err) {
-    alert('خطأ: ' + err.message);
-  }
-};
 
-document.getElementById('downloadBtn').onclick = function() {
-  if(!extractedData || !Object.keys(extractedData).length) return;
-  const blob = new Blob([JSON.stringify(extractedData, null, 2)], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "dst_data.json";
-  a.click();
-  URL.revokeObjectURL(url);
-};
+    const formData = new FormData();
+    formData.append("image", fileInput.files[0]);
+
+    fetch("/generate_dst_from_image", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("خطأ في رفع الصورة");
+        return response.blob().then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "ai_stitch.dst";
+            link.click();
+
+            const colorsHeader = response.headers.get('X-Colors-Info');
+            if (colorsHeader) {
+                const colors = JSON.parse(colorsHeader);
+                const container = document.getElementById('colors-info');
+                container.innerHTML = "ألوان التصميم:<br>";
+                colors.forEach(c => {
+                    const box = document.createElement('span');
+                    box.className = 'color-box';
+                    box.style.backgroundColor = c.hex;
+                    container.appendChild(box);
+                });
+            }
+        });
+    })
+    .catch(err => alert(err));
+}
 </script>
-
 </body>
 </html>
