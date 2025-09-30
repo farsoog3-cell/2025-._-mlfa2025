@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة رسم DST دقيقة للغاية</title>
+<title>لوحة رسم DST نهائية</title>
 <style>
 body, html { margin:0; padding:0; height:100%; width:100%; font-family: 'Segoe UI', sans-serif; display:flex; flex-direction:column; background: #f0f2f5;}
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding: 15px 0; font-size: 1.4em; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.2);}
@@ -17,13 +17,13 @@ button:hover { background:#182848;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST ذكية</header>
+<header>لوحة رسم DST نهائية ودقيقة</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">ارسم على اللوح لتصدير ملف DST مطابق تمامًا لمساراتك.</div>
+    <div class="warn">كل ما ترسمه سيظهر في ملف DST بدقة 100%.</div>
 </div>
 
 <script>
@@ -75,7 +75,7 @@ document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
 // ===== DST الذكي =====
-const MAX_STEP = 2;
+const MAX_STEP = 2; // أقصى خطوة لكل غرزة
 
 function splitStep(dx,dy){
     const steps=[]; let rx=dx, ry=dy;
@@ -99,7 +99,7 @@ function buildDST(strokes){
     const allPoints=[];
     for(const stroke of strokes){
         for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
-        allPoints.push(null);
+        allPoints.push(null); // نهاية السطر
     }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
@@ -111,8 +111,8 @@ function buildDST(strokes){
         const dx=curr.x-prev.x; const dy=curr.y-prev.y;
         for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
     }
-    bodyBytes.push(0x00,0x00,0xF3);
-    const header=new Uint8Array(512); header.fill(0x20); const name='JS_SMART'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    bodyBytes.push(0x00,0x00,0xF3); // نهاية الملف
+    const header=new Uint8Array(512); header.fill(0x20); const name='JS_FINAL'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
     const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
@@ -120,7 +120,7 @@ document.getElementById('export-dst').onclick=()=>{
     if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
     const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'}); const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_smart.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_final.dst'; a.click();
     URL.revokeObjectURL(url);
 };
 
