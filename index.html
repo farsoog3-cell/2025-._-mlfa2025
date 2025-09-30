@@ -39,7 +39,7 @@ document.getElementById('extractBtn').onclick = async function() {
   const formData = new FormData();
   formData.append("file", file);
   
-  const res = await fetch("http://localhost:5000/extract_dst_info", {
+  const res = await fetch("https://2025mlfa-2-7e2x.onrender.com", {
     method:"POST",
     body: formData
   });
