@@ -5,24 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MLFA - مصمم قوالب التطريز المحسّن</title>
 <style>
-body { margin:0; font-family: Arial, sans-serif; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; padding:10px;}
-h1 { font-size:28px; margin-bottom:15px; color:#fff; text-align:center;}
-.container { display:flex; flex-wrap:wrap; gap:20px; width:100%; max-width:1200px; }
-.tools { width:260px; background:#111; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(255,255,255,0.2); display:flex; flex-direction:column; gap:10px;}
+body { margin:0; font-family: Arial, sans-serif; background:#000; color:#fff; display:flex; flex-direction:column; min-height:100vh;}
+h1 { font-size:28px; margin:15px 0; color:#fff; text-align:center;}
+.container { display:flex; flex:1; flex-wrap:wrap; gap:20px; justify-content:center; padding:10px; }
+.tools { flex:0 0 280px; background:#111; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(255,255,255,0.2); display:flex; flex-direction:column; gap:10px;}
 .tools label { display:flex; flex-direction:column; font-weight:bold; color:#fff;}
 .tools input, .tools select { margin-top:5px; padding:5px; border-radius:6px; border:1px solid #fff; background:#222; color:#fff;}
-button { margin-top:10px; padding:10px; background-color:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;}
+button { margin-top:5px; padding:10px; background-color:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s;}
 button:hover { background-color:#1d4ed8; }
-#canvasContainer { flex:1; background:#111; padding:10px; border-radius:12px; box-shadow:0 2px 10px rgba(255,255,255,0.2);}
-canvas { width:100%; max-width:800px; height:auto; border-radius:12px; background-color:#222; cursor:crosshair; display:block; }
-footer { margin-top:15px; font-size:14px; color:#aaa; text-align:center;}
+#canvasContainer { flex:1; min-width:300px; max-width:900px; background:#111; padding:10px; border-radius:12px; box-shadow:0 2px 10px rgba(255,255,255,0.2);}
+canvas { width:100%; height:auto; border-radius:12px; background-color:#222; cursor:crosshair; display:block; }
+footer { margin-top:10px; font-size:14px; color:#aaa; text-align:center; padding-bottom:10px;}
 </style>
 </head>
 <body>
 
-<h1>MLFA - مصمم قوالب التطريز المحسّن</h1>
+<h1>MLFA - مصمم قوالب التطريز</h1>
 
 <div class="container">
+  <!-- لوحة الأدوات -->
   <div class="tools">
     <label>رفع صورة:
       <input type="file" id="uploadImage" accept="image/*">
@@ -49,8 +50,9 @@ footer { margin-top:15px; font-size:14px; color:#aaa; text-align:center;}
     <button id="downloadDST">تنزيل DST</button>
   </div>
 
+  <!-- لوحة الرسم -->
   <div id="canvasContainer">
-    <canvas id="embroideryCanvas" width="600" height="600"></canvas>
+    <canvas id="embroideryCanvas" width="800" height="800"></canvas>
   </div>
 </div>
 
@@ -76,12 +78,11 @@ const startFromImage = document.getElementById('startFromImage');
 let drawing = false;
 let points = [];
 let bgImage = null;
-let stitchData = []; // بيانات الغرز
-let lastColor = null; // لتغيير اللون في DST
+let stitchData = [];
+let lastColor = null;
 
-// قائمة ألوان خيوط حقيقية تقريبية
+// ألوان خيوط تقريبية
 const threadPalette = ['#000000','#333333','#666666','#999999','#CCCCCC','#FFFFFF','#FF0000','#00FF00','#0000FF'];
-
 function closestThreadColor(color){
     let r = parseInt(color.slice(1,3),16);
     let g = parseInt(color.slice(3,5),16);
@@ -98,7 +99,7 @@ function closestThreadColor(color){
     return chosen;
 }
 
-// تعيين خلفية القماش
+// إعداد خلفية القماش
 function setCanvasBackground(){
     ctx.fillStyle = fabricType.value==='cotton'?'#222':fabricType.value==='linen'?'#333':'#111';
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -159,26 +160,19 @@ downloadPNG.addEventListener('click', ()=>{
     link.click();
 });
 
-// توليد DST محسّن مع تغييرات اللون
+// توليد DST محسّن
 downloadDST.addEventListener('click', ()=>{
     const stitchBinary = [];
     const pushByte = b=>stitchBinary.push(b&0xFF);
     for(let i=0;i<512;i++) pushByte(0x20); // رأس DST
-
     lastColor = null;
     stitchData.forEach(p=>{
         let color = closestThreadColor(p.color);
-        if(color !== lastColor){
-            // إضافة Color Change افتراضية في DST
-            pushByte(0xFE); // علامة مبسطة لتغيير اللون
-            lastColor = color;
-        }
+        if(color !== lastColor){ pushByte(0xFE); lastColor=color; }
         let x = Math.round(p.x*10);
         let y = Math.round(p.y*10);
-        pushByte(x&0xFF);
-        pushByte((x>>8)&0xFF);
-        pushByte(y&0xFF);
-        pushByte((y>>8)&0xFF);
+        pushByte(x&0xFF); pushByte((x>>8)&0xFF);
+        pushByte(y&0xFF); pushByte((y>>8)&0xFF);
     });
     pushByte(0x1A);
     const blob = new Blob([new Uint8Array(stitchBinary)],{type:'application/octet-stream'});
@@ -190,51 +184,33 @@ downloadDST.addEventListener('click', ()=>{
 
 // زر "ابدأ من الصورة" مع مسارات متصلة
 startFromImage.addEventListener('click', ()=>{
-    if(!bgImage){
-        alert('يرجى رفع صورة أولاً.');
-        return;
-    }
+    if(!bgImage){ alert('يرجى رفع صورة أولاً.'); return; }
 
-    drawing = false;
-    points = [];
-    stitchData = [];
-
+    drawing=false; points=[]; stitchData=[];
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
+    tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
     const tctx = tempCanvas.getContext('2d');
     tctx.drawImage(bgImage,0,0,canvas.width,canvas.height);
     const imgData = tctx.getImageData(0,0,canvas.width,canvas.height);
     const data = imgData.data;
+    const step = 5;
 
-    const step = 5; // خطوة الغرز
     for(let y=0; y<canvas.height; y+=step){
         for(let x=0; x<canvas.width; x+=step){
             const idx = (y*canvas.width + x)*4;
-            const r = data[idx], g = data[idx+1], b = data[idx+2];
-            const brightness = (r+g+b)/3;
-            let color = brightness>200?'#FFFFFF':
-                        brightness>150?'#CCCCCC':
-                        brightness>100?'#999999':
-                        brightness>50?'#666666':'#000000';
-            color = closestThreadColor(color);
-
-            // إنشاء غرزة متصلة (سطر صغير)
+            const r=data[idx], g=data[idx+1], b=data[idx+2];
+            const brightness=(r+g+b)/3;
+            let color=brightness>200?'#FFFFFF':brightness>150?'#CCCCCC':brightness>100?'#999999':brightness>50?'#666666':'#000000';
+            color=closestThreadColor(color);
             stitchData.push({x:x,y:y,color:color,width:parseInt(threadSize.value),length:parseInt(stitchLength.value)});
             if(x>0) stitchData.push({x:x-1,y:y,color:color,width:parseInt(threadSize.value),length:parseInt(stitchLength.value)});
         }
     }
-
     setCanvasBackground();
     stitchData.forEach(p=>{
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = p.width;
-        ctx.beginPath();
-        ctx.moveTo(p.x,p.y);
-        ctx.lineTo(p.x+1,p.y+1);
-        ctx.stroke();
+        ctx.strokeStyle=p.color; ctx.lineWidth=p.width;
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+1,p.y+1); ctx.stroke();
     });
-
     alert('تم إنشاء مسارات غرز متصلة من الصورة مع ألوان خيوط حقيقية.');
 });
 </script>
