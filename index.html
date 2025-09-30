@@ -3,24 +3,18 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>مولد قوالب التطريز</title>
+<title>مولد قوالب التطريز الذكي</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-pink-100 to-blue-100 min-h-screen flex items-center justify-center p-6">
 <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-3xl w-full">
-<h1 class="text-3xl font-bold text-center text-gray-800 mb-4">🧵 مولد قوالب التطريز الاحترافي</h1>
+<h1 class="text-3xl font-bold text-center text-gray-800 mb-4">🧵 مولد قوالب التطريز الذكي</h1>
 <p class="text-center text-gray-600 mb-6">ارفع صورة، اختر الإعدادات، وشاهد القالب مباشرة.</p>
 
 <form id="uploadForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
   <div>
     <label class="block text-gray-700 mb-2 font-semibold">📷 اختر صورة:</label>
-    <input type="file" id="imageInput" accept="image/*"
-      class="file:mr-4 file:py-2 file:px-4
-             file:rounded-full file:border-0
-             file:text-sm file:font-semibold
-             file:bg-blue-600 file:text-white
-             hover:file:bg-blue-700
-             block w-full text-gray-700 border rounded-lg p-2"/>
+    <input type="file" id="imageInput" accept="image/*" class="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 block w-full text-gray-700 border rounded-lg p-2"/>
   </div>
 
   <div>
@@ -46,19 +40,23 @@
     </select>
   </div>
 
+  <div>
+    <label class="block text-gray-700 mb-2 font-semibold">🪄 إزالة الخلفية تلقائيًا:</label>
+    <input type="checkbox" id="removeBg" class="w-6 h-6"/>
+  </div>
+
   <div class="col-span-1 md:col-span-2 flex justify-center">
     <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition">
-      🚀 إنشاء القالب
+      🚀 إنشاء القالب النهائي
     </button>
   </div>
 </form>
 
 <div id="previewSection" class="hidden mt-8 text-center">
-  <h2 class="text-xl font-semibold text-gray-700 mb-2">📑 معاينة:</h2>
-  <iframe id="pdfPreview" class="w-full h-96 border rounded-lg shadow"></iframe>
-  <a id="downloadLink" href="#" download="pattern.pdf"
-     class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg">
-    تحميل PDF
+  <h2 class="text-xl font-semibold text-gray-700 mb-2">📑 معاينة القالب:</h2>
+  <img id="pdfPreview" class="w-full h-96 border rounded-lg shadow"/>
+  <a id="downloadLink" href="#" download="pattern.pdf" class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg">
+    تحميل PDF النهائي
   </a>
 </div>
 </div>
@@ -71,9 +69,35 @@ const imageInput = document.getElementById("imageInput");
 const gridSize = document.getElementById("gridSize");
 const stitchType = document.getElementById("stitchType");
 const fabricType = document.getElementById("fabricType");
+const removeBg = document.getElementById("removeBg");
 const previewSection = document.getElementById("previewSection");
 const pdfPreview = document.getElementById("pdfPreview");
 const downloadLink = document.getElementById("downloadLink");
+
+async function updatePreview(){
+    if(!imageInput.files.length) return;
+    const formData = new FormData();
+    formData.append("image", imageInput.files[0]);
+    formData.append("grid_size", gridSize.value);
+    formData.append("stitch_type", stitchType.value);
+    formData.append("fabric_type", fabricType.value);
+    formData.append("remove_bg", removeBg.checked);
+
+    try{
+        const response = await fetch(`${SERVER_URL}/upload_preview`,{method:"POST", body:formData});
+        if(!response.ok) return;
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        pdfPreview.src = url;
+        previewSection.classList.remove("hidden");
+    }catch(err){ console.error(err);}
+}
+
+imageInput.addEventListener("change", updatePreview);
+gridSize.addEventListener("input", updatePreview);
+stitchType.addEventListener("change", updatePreview);
+fabricType.addEventListener("change", updatePreview);
+removeBg.addEventListener("change", updatePreview);
 
 form.addEventListener("submit", async (e)=>{
     e.preventDefault();
@@ -83,6 +107,7 @@ form.addEventListener("submit", async (e)=>{
     formData.append("grid_size", gridSize.value);
     formData.append("stitch_type", stitchType.value);
     formData.append("fabric_type", fabricType.value);
+    formData.append("remove_bg", removeBg.checked);
 
     try{
         const response = await fetch(`${SERVER_URL}/upload`,{ method:"POST", body:formData });
