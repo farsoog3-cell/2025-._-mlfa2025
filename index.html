@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>استخراج معلومات DST مع المعاينة</title>
+<title>استخراج معلومات DST متكامل</title>
 <style>
 body { font-family:sans-serif; background:#111; color:#fff; padding:20px; }
 button { padding:10px 15px; margin:5px; cursor:pointer; }
@@ -12,10 +12,11 @@ textarea { width:100%; height:200px; margin-top:10px; background:#222; color:#ff
 </head>
 <body>
 
-<h2>رفع ملف DST لاستخراج المعلومات</h2>
+<h2>رفع ملف DST/PES لاستخراج المعلومات</h2>
 <input type="file" id="dstFile" accept=".dst,.pes">
 <button id="extractBtn">استخراج المعلومات</button>
 <button id="copyBtn">نسخ JSON</button>
+<button id="downloadBtn">تحميل JSON</button>
 
 <canvas id="previewCanvas"></canvas>
 <textarea id="output" placeholder="ستظهر المعلومات هنا..." readonly></textarea>
@@ -45,7 +46,7 @@ document.getElementById('extractBtn').onclick = async function() {
     extractedData = data;
     document.getElementById('output').value = JSON.stringify(data, null, 2);
 
-    // رسم معاينة
+    // رسم معاينة التطريز
     const stitches = data.stitches;
     const colors = data.colors;
     if(stitches.length === 0) return;
@@ -76,6 +77,18 @@ document.getElementById('copyBtn').onclick = function() {
   if(!extractedData || !Object.keys(extractedData).length) return;
   navigator.clipboard.writeText(JSON.stringify(extractedData, null, 2));
   alert('تم نسخ المعلومات!');
+};
+
+document.getElementById('downloadBtn').onclick = function() {
+  if(!extractedData || !Object.keys(extractedData).length) return;
+  const blob = new Blob([JSON.stringify(extractedData, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "dst_data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  alert('تم تحميل JSON بنجاح!');
 };
 </script>
 
