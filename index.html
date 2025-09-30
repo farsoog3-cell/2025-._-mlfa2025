@@ -18,10 +18,6 @@ textarea { width:100%; height:300px; margin-top:10px; background:#222; color:#ff
 
 <textarea id="output" placeholder="ستظهر المعلومات هنا..." readonly></textarea>
 
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.0/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
-
 <script>
 let extractedData = {};
 
@@ -30,22 +26,24 @@ document.getElementById('extractBtn').onclick = async function() {
   if(!fileInput.files.length) { alert('اختر ملف DST أولاً'); return; }
   const file = fileInput.files[0];
 
-  // قراءة الملف كـ ArrayBuffer
-  const buffer = await file.arrayBuffer();
-
-  // هنا نحتاج مكتبة pyembroidery لكن في المتصفح لا تعمل، 
-  // لذا سنرسل الملف إلى خادم Python صغير يقوم بالتحليل ثم يرجع JSON.
-  
   const formData = new FormData();
   formData.append("file", file);
-  
-  const res = await fetch("https://2025mlfa-2-7e2x.onrender.com", {
-    method:"POST",
-    body: formData
-  });
-  const data = await res.json();
-  extractedData = data;
-  document.getElementById('output').value = JSON.stringify(data, null, 2);
+
+  try {
+    const res = await fetch("https://2025mlfa-2-7e2x.onrender.com/extract_dst_info", {
+      method:"POST",
+      body: formData
+    });
+    if(!res.ok) {
+      const text = await res.text();
+      throw new Error(text || 'حدث خطأ أثناء إرسال الملف');
+    }
+    const data = await res.json();
+    extractedData = data;
+    document.getElementById('output').value = JSON.stringify(data, null, 2);
+  } catch(err) {
+    alert('خطأ: ' + err.message);
+  }
 };
 
 document.getElementById('copyBtn').onclick = function() {
