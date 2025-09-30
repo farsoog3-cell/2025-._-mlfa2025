@@ -3,30 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>رسم متقن لمسار DST + معاينة</title>
+<title>رسم متقن لمسار DST - ملء الشاشة</title>
 <style>
-body{margin:0;font-family:system-ui;display:flex;flex-direction:column;height:100vh;}
-header{padding:10px;text-align:center;background:#222;color:#fff;}
-#main{flex:1;display:flex;flex-direction:row;}
-canvas{border-top:4px solid #ccc;touch-action:none;}
-#board{flex:1;}
-#preview{width:300px;border-left:2px solid #aaa;background:#f0f0f0;}
-.controls{padding:10px;text-align:center;background:#f7f7fb;}
-button{padding:8px 12px;margin:0 5px;border-radius:6px;border:1px solid #cfd6e8;background:#fff;}
-.warn{color:#a00;font-size:13px;margin-top:6px;}
+body, html{
+    margin:0;
+    padding:0;
+    height:100%;
+    width:100%;
+    font-family:system-ui;
+    display:flex;
+    flex-direction:column;
+}
+
+header{
+    padding:10px;
+    text-align:center;
+    background:#222;
+    color:#fff;
+    flex: 0 0 auto;
+}
+
+#main{
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:row;
+    overflow:hidden;
+}
+
+canvas{
+    display:block;
+    touch-action:none;
+}
+
+#board{
+    flex:1 1 auto;
+}
+
+#preview{
+    width:300px; /* تبقى كما هي */
+    border-left:2px solid #aaa;
+    background:#f0f0f0;
+}
+
+.controls{
+    flex:0 0 auto;
+    padding:10px;
+    text-align:center;
+    background:#f7f7fb;
+}
+
+button{
+    padding:8px 12px;
+    margin:0 5px;
+    border-radius:6px;
+    border:1px solid #cfd6e8;
+    background:#fff;
+}
+
+.warn{
+    color:#a00;
+    font-size:13px;
+    margin-top:6px;
+}
 </style>
 </head>
 <body>
-<header>رسم متقن لمسار DST - معاينة حية</header>
+<header>رسم متقن لمسار DST - ملء الشاشة</header>
 <div id="main">
-<canvas id="board"></canvas>
-<canvas id="preview"></canvas>
+    <canvas id="board"></canvas>
+    <canvas id="preview"></canvas>
 </div>
 <div class="controls">
-<button id="undo">تراجع</button>
-<button id="clear">مسح</button>
-<button id="export-dst">تصدير DST متقن</button>
-<div class="warn">سترى الرسم في معاينة DST فورًا. الملف الناتج سيطابقه تمامًا.</div>
+    <button id="undo">تراجع</button>
+    <button id="clear">مسح</button>
+    <button id="export-dst">تصدير DST متقن</button>
+    <div class="warn">سترى الرسم في معاينة DST فورًا. الملف الناتج سيطابقه تمامًا.</div>
 </div>
 
 <script>
@@ -45,9 +96,8 @@ const MM_PER_INCH = 25.4;
 function pxToMM(px){ return px / DPI * MM_PER_INCH; }
 
 function resize(){
-    board.width = window.innerWidth - 300;
+    board.width = window.innerWidth - preview.width;
     board.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
-    preview.width = 300;
     preview.height = board.height;
     redraw();
 }
@@ -194,7 +244,6 @@ function updatePreview(){
     ctxPreview.lineJoin='round';
     ctxPreview.lineCap='round';
     const normalized = normalizeStrokes(strokes.concat(current));
-    // حساب مقياس ليظهر داخل preview
     const {maxX,maxY} = getBounds(normalized);
     const scaleX = preview.width / (maxX||preview.width);
     const scaleY = preview.height / (maxY||preview.height);
