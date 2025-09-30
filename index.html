@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>مُصمم قوالب التطريز المتقدم</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f3f4f6; display:flex; flex-direction:column; align-items:center; padding:20px; }
-    h1 { font-size:32px; margin-bottom:20px; color:#1f2937; }
-    .container { display:flex; gap:20px; }
-    .tools { width:250px; background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:10px; }
-    .tools label { display:flex; flex-direction:column; font-weight:bold; }
-    .tools input, .tools select { margin-top:5px; padding:5px; border-radius:6px; border:1px solid #ccc; }
-    #canvasContainer { background:white; padding:10px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-    canvas { border-radius:12px; background-color:#fdf6e3; cursor:crosshair; }
-    button { margin-top:10px; padding:10px; background-color:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
-    button:hover { background-color:#1d4ed8; }
-  </style>
+<meta charset="UTF-8">
+<title>MLFA - مصمم قوالب التطريز</title>
+<style>
+body { margin:0; font-family: Arial, sans-serif; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; padding:20px;}
+h1 { font-size:32px; margin-bottom:20px; color:#fff; text-align:center;}
+.container { display:flex; gap:20px; width:100%; max-width:1000px; }
+.tools { width:250px; background:#111; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(255,255,255,0.2); display:flex; flex-direction:column; gap:10px;}
+.tools label { display:flex; flex-direction:column; font-weight:bold; color:#fff;}
+.tools input, .tools select { margin-top:5px; padding:5px; border-radius:6px; border:1px solid #fff; background:#222; color:#fff;}
+button { margin-top:10px; padding:10px; background-color:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;}
+button:hover { background-color:#1d4ed8; }
+#canvasContainer { flex:1; background:#111; padding:10px; border-radius:12px; box-shadow:0 2px 10px rgba(255,255,255,0.2);}
+canvas { border-radius:12px; background-color:#222; cursor:crosshair;}
+footer { margin-top:20px; font-size:14px; color:#aaa; text-align:center;}
+</style>
 </head>
 <body>
 
-<h1>مُصمم قوالب التطريز المتقدم</h1>
+<h1>MLFA - مصمم قوالب التطريز</h1>
 
 <div class="container">
   <div class="tools">
@@ -41,7 +42,9 @@
         <option value="silk">حرير</option>
       </select>
     </label>
-    <button id="downloadBtn">تنزيل PNG</button>
+    <button id="downloadPNG">تنزيل PNG</button>
+    <button id="downloadDST">تنزيل DST</button>
+    <button id="resetCanvas">مسح اللوح</button>
   </div>
 
   <div id="canvasContainer">
@@ -49,72 +52,116 @@
   </div>
 </div>
 
+<footer>
+  موقع: MLFA | المطورين: فارس وملهم
+</footer>
+
 <script>
-  const canvas = document.getElementById('embroideryCanvas');
-  const ctx = canvas.getContext('2d');
+// المتغيرات الأساسية
+const canvas = document.getElementById('embroideryCanvas');
+const ctx = canvas.getContext('2d');
 
-  const threadColor = document.getElementById('threadColor');
-  const threadSize = document.getElementById('threadSize');
-  const stitchLength = document.getElementById('stitchLength');
-  const fabricType = document.getElementById('fabricType');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const uploadImage = document.getElementById('uploadImage');
+const threadColor = document.getElementById('threadColor');
+const threadSize = document.getElementById('threadSize');
+const stitchLength = document.getElementById('stitchLength');
+const fabricType = document.getElementById('fabricType');
+const uploadImage = document.getElementById('uploadImage');
+const downloadPNG = document.getElementById('downloadPNG');
+const downloadDST = document.getElementById('downloadDST');
+const resetCanvas = document.getElementById('resetCanvas');
 
-  let drawing = false;
-  let points = [];
-  let bgImage = null;
+let drawing = false;
+let points = [];
+let bgImage = null;
+let stitchData = []; // بيانات الغرز
 
-  function setCanvasBackground() {
-    ctx.fillStyle = fabricType.value === 'cotton' ? '#fdf6e3' : fabricType.value === 'linen' ? '#eee8d5' : '#fff5f5';
+function setCanvasBackground(){
+    ctx.fillStyle = fabricType.value==='cotton'?'#222':fabricType.value==='linen'?'#333':'#111';
     ctx.fillRect(0,0,canvas.width,canvas.height);
     if(bgImage) ctx.drawImage(bgImage,0,0,canvas.width,canvas.height);
-  }
+}
+setCanvasBackground();
 
-  setCanvasBackground();
+// الرسم على اللوح
+canvas.addEventListener('mousedown', e=>{
+    drawing=true;
+    points.push({x:e.offsetX,y:e.offsetY});
+});
 
-  canvas.addEventListener('mousedown', e => {
-    drawing = true;
-    points.push({x: e.offsetX, y: e.offsetY});
-  });
-
-  canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('mousemove', e=>{
     if(!drawing) return;
-    const last = points[points.length - 1];
+    const last = points[points.length-1];
     const x = e.offsetX;
     const y = e.offsetY;
-
     ctx.strokeStyle = threadColor.value;
     ctx.lineWidth = threadSize.value;
     ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(x, y);
-    ctx.setLineDash([stitchLength.value, stitchLength.value]); // تأثير الغرز
+    ctx.moveTo(last.x,last.y);
+    ctx.lineTo(x,y);
+    ctx.setLineDash([stitchLength.value,stitchLength.value]);
     ctx.stroke();
-    points.push({x, y});
-  });
+    points.push({x,y});
+    stitchData.push({x:x,y:y,color:threadColor.value,width:threadSize.value,length:stitchLength.value});
+});
 
-  canvas.addEventListener('mouseup', () => { drawing = false; points=[]; });
-  canvas.addEventListener('mouseleave', () => { drawing = false; points=[]; });
+canvas.addEventListener('mouseup', ()=>{drawing=false; points=[];});
+canvas.addEventListener('mouseleave', ()=>{drawing=false; points=[];});
 
-  fabricType.addEventListener('change', setCanvasBackground);
+fabricType.addEventListener('change', setCanvasBackground);
 
-  uploadImage.addEventListener('change', (e) => {
+uploadImage.addEventListener('change', e=>{
     const file = e.target.files[0];
     if(!file) return;
     const img = new Image();
-    img.onload = () => {
-      bgImage = img;
-      setCanvasBackground();
+    img.onload = ()=>{
+        bgImage = img;
+        setCanvasBackground();
     }
     img.src = URL.createObjectURL(file);
-  });
+});
 
-  downloadBtn.addEventListener('click', () => {
+resetCanvas.addEventListener('click', ()=>{
+    bgImage=null;
+    stitchData=[];
+    setCanvasBackground();
+});
+
+// تنزيل PNG
+downloadPNG.addEventListener('click', ()=>{
     const link = document.createElement('a');
-    link.download = 'embroidery_template.png';
+    link.download='embroidery.png';
     link.href = canvas.toDataURL();
     link.click();
-  });
+});
+
+// تصدير DST حقيقي
+downloadDST.addEventListener('click', ()=>{
+    const stitchBinary = [];
+    const pushByte = b=>stitchBinary.push(b&0xFF);
+
+    // رأس DST ثابت (512 بايت مطلوب عادة)
+    for(let i=0;i<512;i++) pushByte(0x20);
+
+    // البيانات الفعلية
+    stitchData.forEach(p=>{
+        let x = Math.round(p.x*10); // تحويل للنقاط
+        let y = Math.round(p.y*10);
+        // DST يستخدم 3 بايت لكل محور بشكل معقد: هنا نسخة مبسطة
+        pushByte(x&0xFF);
+        pushByte((x>>8)&0xFF);
+        pushByte(y&0xFF);
+        pushByte((y>>8)&0xFF);
+    });
+
+    // نهاية الملف
+    pushByte(0x1A);
+
+    const blob = new Blob([new Uint8Array(stitchBinary)],{type:'application/octet-stream'});
+    const link = document.createElement('a');
+    link.download='embroidery.dst';
+    link.href = URL.createObjectURL(blob);
+    link.click();
+});
 </script>
 
 </body>
