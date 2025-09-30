@@ -1,121 +1,170 @@
 <!doctype html>
 <html lang="ar">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>مولد ملف DST بسيط</title>
-  <style>
-    body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px;background:#f9f9f9}
-    canvas{border:1px solid #ccc;touch-action:none}
-    .controls{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
-    button{padding:6px 12px}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>رسم مسار حقيقي - DST صناعي</title>
+<style>
+body { margin:0; font-family:system-ui; display:flex; flex-direction:column; height:100vh; }
+header { padding:10px; text-align:center; background:#222; color:#fff; }
+canvas { flex:1; display:block; border-top:4px solid #ccc; touch-action:none; }
+.controls { padding:10px; text-align:center; background:#f7f7fb; }
+button { padding:8px 12px; margin:0 5px; border-radius:6px; border:1px solid #cfd6e8; background:#fff; }
+.warn { color:#a00; font-size:13px; margin-top:6px; }
+</style>
 </head>
 <body>
-  <h1>صفحة توليد ملف <code>.DST</code> (تجريبية)</h1>
-  <canvas id="board" width="600" height="400"></canvas>
-  <div class="controls">
-    <button id="undo">تراجع</button>
-    <button id="clear">مسح</button>
-    <button id="export-json">تصدير JSON</button>
-    <button id="export-dst">تصدير ملف DST</button>
-  </div>
-  <p>ارسم بالماوس أو اللمس. ثم صدّر ملف DST مبسط (للتجربة فقط، ليس صيغة صناعية مكتملة).</p>
+<header>رسم مسار حقيقي وتصدير DST صناعي</header>
+<canvas id="board"></canvas>
+<div class="controls">
+<button id="undo">تراجع</button>
+<button id="clear">مسح</button>
+<button id="export-dst">تصدير DST</button>
+<div class="warn">ملف DST صناعي للاختبار - تأكد من اختباره قبل الإنتاج.</div>
+</div>
+
 <script>
-(() => {
-  const canvas = document.getElementById('board');
-  const ctx = canvas.getContext('2d');
-  let drawing = false;
-  let points = [];
-  let currentStroke = [];
+// ====== إعداد الرسم ======
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let strokes = []; // array of strokes, each stroke = [{x,y}, ...]
+let current = [];
+let drawing = false;
 
-  function start(x,y){
-    drawing = true;
-    currentStroke = [{x,y}];
-  }
-  function move(x,y){
-    if(!drawing) return;
-    currentStroke.push({x,y});
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - document.querySelector('header').offsetHeight - document.querySelector('.controls').offsetHeight;
     redraw();
-  }
-  function end(){
-    if(!drawing) return;
-    drawing = false;
-    if(currentStroke.length>0){
-      points.push(currentStroke);
-    }
-    currentStroke = [];
-  }
+}
+window.addEventListener('resize', resize);
+resize();
 
-  function redraw(){
+function start(x,y){ drawing=true; current=[{x,y}]; }
+function move(x,y){ if(!drawing) return; current.push({x,y}); redraw(); }
+function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; }
+
+canvas.addEventListener('mousedown', e=>{ const r=canvas.getBoundingClientRect(); start(e.clientX-r.left, e.clientY-r.top); });
+window.addEventListener('mousemove', e=>{ if(!drawing) return; const r=canvas.getBoundingClientRect(); move(e.clientX-r.left, e.clientY-r.top); });
+window.addEventListener('mouseup', end);
+
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); start(t.clientX-r.left, t.clientY-r.top); }, {passive:false});
+canvas.addEventListener('touchmove', e=>{ e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); move(t.clientX-r.left, t.clientY-r.top); }, {passive:false});
+canvas.addEventListener('touchend', e=>{ e.preventDefault(); end(); }, {passive:false});
+
+function redraw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.lineWidth=2;
-    ctx.strokeStyle="#000";
-    ctx.lineJoin="round";
-    ctx.lineCap="round";
-    function drawStroke(stroke){
-      if(stroke.length<2) return;
-      ctx.beginPath();
-      ctx.moveTo(stroke[0].x, stroke[0].y);
-      for(let i=1;i<stroke.length;i++){
-        ctx.lineTo(stroke[i].x, stroke[i].y);
-      }
-      ctx.stroke();
+    ctx.strokeStyle='#000';
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+    function drawStroke(st){
+        if(!st || st.length<2) return;
+        ctx.beginPath();
+        ctx.moveTo(st[0].x, st[0].y);
+        for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x, st[i].y);
+        ctx.stroke();
     }
-    for(const s of points) drawStroke(s);
-    drawStroke(currentStroke);
-  }
+    for(const s of strokes) drawStroke(s);
+    drawStroke(current);
+}
 
-  canvas.addEventListener('mousedown', e=>{
-    const r=canvas.getBoundingClientRect();
-    start(e.clientX-r.left, e.clientY-r.top);
-  });
-  canvas.addEventListener('mousemove', e=>{
-    if(!drawing) return;
-    const r=canvas.getBoundingClientRect();
-    move(e.clientX-r.left, e.clientY-r.top);
-  });
-  window.addEventListener('mouseup', end);
+// ====== أزرار ======
+document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
+document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
-  canvas.addEventListener('touchstart', e=>{
-    e.preventDefault();
-    const t=e.touches[0];const r=canvas.getBoundingClientRect();
-    start(t.clientX-r.left, t.clientY-r.top);
-  },{passive:false});
-  canvas.addEventListener('touchmove', e=>{
-    e.preventDefault();
-    const t=e.touches[0];const r=canvas.getBoundingClientRect();
-    move(t.clientX-r.left, t.clientY-r.top);
-  },{passive:false});
-  canvas.addEventListener('touchend', e=>{
-    e.preventDefault();end();
-  },{passive:false});
+// ====== مولد DST صناعي ======
+const MAX_STEP = 121;
 
-  document.getElementById('clear').onclick=()=>{points=[];currentStroke=[];redraw();}
-  document.getElementById('undo').onclick=()=>{points.pop();redraw();}
-
-  document.getElementById('export-json').onclick=()=>{
-    const blob=new Blob([JSON.stringify(points)],{type:"application/json"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="design.json";a.click();URL.revokeObjectURL(url);
-  }
-
-  document.getElementById('export-dst').onclick=()=>{
-    // NOTE: very simplified DST-like format (not real Tajima)
-    let data="SIMPLE DST FILE\n";
-    for(const stroke of points){
-      data+="STROKE\n";
-      for(const p of stroke){
-        data+=p.x+","+p.y+"\n";
-      }
+function splitStep(dx,dy){
+    const steps = [];
+    let rx=dx, ry=dy;
+    while(Math.abs(rx)>MAX_STEP || Math.abs(ry)>MAX_STEP){
+        const sx=Math.max(-MAX_STEP, Math.min(MAX_STEP, rx));
+        const sy=Math.max(-MAX_STEP, Math.min(MAX_STEP, ry));
+        steps.push([sx,sy]);
+        rx-=sx; ry-=sy;
     }
-    const blob=new Blob([data],{type:"text/plain"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="design.dst";a.click();URL.revokeObjectURL(url);
-  }
+    steps.push([rx,ry]);
+    return steps;
+}
 
-  redraw();
-})();
+function encodeStep(dx,dy,control){
+    let b0=0,b1=0,b2=0;
+    function applyAxis(v,axis){
+        const sign = v<0?-1:1; let absv=Math.abs(v);
+        const W=[81,27,9,3,1];
+        for(const w of W){
+            if(absv>=w){
+                if(axis==='x'){
+                    if(w===1)b0|=(sign>0?0x01:0x02);
+                    else if(w===9)b0|=(sign>0?0x04:0x08);
+                    else if(w===3)b1|=(sign>0?0x01:0x02);
+                    else if(w===27)b1|=(sign>0?0x04:0x08);
+                    else if(w===81)b2|=(sign>0?0x20:0x40);
+                } else {
+                    if(w===1)b0|=(sign>0?0x10:0x20);
+                    else if(w===9)b0|=(sign>0?0x40:0x80);
+                    else if(w===3)b1|=(sign>0?0x10:0x20);
+                    else if(w===27)b1|=(sign>0?0x40:0x80);
+                    else if(w===81)b2|=(sign>0?0x04:0x08);
+                }
+                absv-=w;
+            }
+        }
+    }
+    applyAxis(dx,'x');
+    applyAxis(dy,'y');
+    if(control===0)b2|=0x03; // STITCH
+    else if(control===1)b2|=0x83; // JUMP
+    else if(control===2)b2|=0x23; // TRIM
+    b0&=0xFF;b1&=0xFF;b2&=0xFF;
+    return [b0,b1,b2];
+}
+
+function buildDST(strokes){
+    const allPoints=[];
+    for(const stroke of strokes){
+        for(const p of stroke) allPoints.push(p);
+        allPoints.push(null); // TRIM
+    }
+    if(allPoints.length===0) return null;
+    let prev=allPoints[0]||{x:0,y:0};
+    const bodyBytes=[];
+    let first=false;
+    for(const pt of allPoints){
+        if(pt===null){
+            bodyBytes.push(...encodeStep(0,0,2)); first=false; continue;
+        }
+        const curr=pt;
+        if(!first){
+            const dx=Math.round(curr.x-prev.x);
+            const dy=Math.round(curr.y-prev.y);
+            const sub=splitStep(dx,dy);
+            for(const [sx,sy] of sub) bodyBytes.push(...encodeStep(sx,sy,1));
+            prev=curr; first=true; continue;
+        }
+        const dx=Math.round(curr.x-prev.x);
+        const dy=Math.round(curr.y-prev.y);
+        for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0));
+        prev=curr;
+    }
+    bodyBytes.push(0x00,0x00,0xF3);
+    const header=new Uint8Array(512); header.fill(0x20);
+    const name='JS_DESIGN'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const buf=new Uint8Array(512+bodyBytes.length);
+    buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512);
+    return buf.buffer;
+}
+
+document.getElementById('export-dst').onclick=()=>{
+    if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
+    const buf=buildDST(strokes);
+    if(!buf){ alert('خطأ في إنشاء الملف'); return; }
+    const blob=new Blob([buf],{type:'application/octet-stream'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='design_real.dst'; a.click();
+    URL.revokeObjectURL(url);
+};
 </script>
 </body>
 </html>
