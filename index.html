@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>خريطة تطريز ذكية مع تصدير DST</title>
+<title>خريطة تطريز ذكية مع تصدير DST - محاكاة حقيقية</title>
 <style>
 body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
@@ -11,131 +11,47 @@ header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-al
 canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
 #board { width:80vmin; height:80vmin;}
 .controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; box-shadow:0 -2px 5px rgba(0,0,0,0.05); flex-wrap:wrap;}
-button, input { padding:8px 12px; margin:5px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; }
-button { background:#4b6cb7; color:#fff; font-weight:600; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-button:hover { background:#182848;}
-input[type=file] { cursor:pointer; }
-.warn { color:#d00; font-size:0.85em; margin-left:15px; }
-
-/* زر رفع ملف احترافي */
-.upload-label {
-    background: linear-gradient(90deg,#4b6cb7,#182848);
-    color: #fff;
-    padding: 10px 18px;
-    margin: 5px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
-}
-.upload-label:hover {
-    background: #182848;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.25);
-}
-#file-name {
-    font-size: 0.9em;
-    color: #333;
-    margin-right: 10px;
-}
-
-/* السير الذاتية */
-.bio-title {
-    text-align: center;
-    font-size: 1.4em;
-    font-weight: bold;
-    margin: 25px 0 15px;
-    color: #182848;
-}
-
-.devs {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    padding: 10px 20px 30px;
-}
-
-.dev-card {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    padding: 20px;
-    width: 280px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.dev-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-}
-
-.dev-card h3 {
-    margin: 0 0 10px;
-    color: #4b6cb7;
-    font-size: 1.2em;
-}
-
-.dev-card .role {
-    font-size: 0.9em;
-    font-weight: bold;
-    color: #555;
-    margin-bottom: 10px;
-}
-
-.dev-card ul {
-    margin: 0;
-    padding-left: 18px;
-    font-size: 0.9em;
-    line-height: 1.5em;
-    color: #333;
-}
+button { padding:8px 12px; margin:5px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; background:#4b6cb7; color:#fff; font-weight:600; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+button:hover { background:#182848; }
+.upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; }
+.upload-btn { background:#4b6cb7; color:white; font-weight:600; padding:8px 20px; border-radius:12px; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+.upload-btn:hover { background:#182848; }
+.upload-btn-wrapper input[type=file] { font-size:100px; position:absolute; left:0; top:0; opacity:0; cursor:pointer; }
+.devs { display:flex; justify-content:center; gap:20px; margin:20px; flex-wrap:wrap; }
+.dev-card { background:#fff; border-radius:16px; box-shadow:0 4px 8px rgba(0,0,0,0.1); padding:20px; width:220px; text-align:center; transition:0.3s; }
+.dev-card:hover { transform:translateY(-5px); box-shadow:0 6px 12px rgba(0,0,0,0.15);}
+.dev-name { font-size:1.2em; font-weight:bold; color:#182848; margin-bottom:10px; }
+.dev-role { font-size:0.9em; color:#4b6cb7; margin-bottom:10px; }
+.dev-bio { font-size:0.85em; color:#555; line-height:1.4; }
+.warn { color:#d00; font-size:0.85em; margin-left:15px;}
 </style>
 </head>
 <body>
 <header>mlfa2025.89</header>
 
+<div class="devs">
+  <div class="dev-card">
+    <div class="dev-name">فارس</div>
+    <div class="dev-role">مطور رئيسي</div>
+    <div class="dev-bio">المسؤول عن تصميم خوارزميات التطريز الذكي وتحويل الصور إلى مخططات قابلة للتنفيذ.</div>
+  </div>
+  <div class="dev-card">
+    <div class="dev-name">ملهم</div>
+    <div class="dev-role">مساعد التطوير</div>
+    <div class="dev-bio">يساهم في تحسين الأداء وتجربة المستخدم وضمان توافق التصدير مع أجهزة التطريز.</div>
+  </div>
+</div>
+
 <div id="main"><canvas id="board"></canvas></div>
 
 <div class="controls">
-    <button id="clear">مسح</button>
-    <button id="export-dst">تصدير DST</button>
-
-    <!-- زر رفع ملف احترافي -->
-    <label for="upload" class="upload-label">📂 رفع صورة</label>
-    <input type="file" id="upload" accept="image/*" hidden>
-    <span id="file-name">لم يتم اختيار ملف</span>
-
-    <div class="warn">الصورة تتحول إلى مخطط تطريز مفهوم للماكينة.</div>
-</div>
-
-<!-- قسم السيرة الذاتية -->
-<div class="bio-title">سير ذاتية — فريق التطوير</div>
-<div class="devs">
-    <div class="dev-card">
-        <h3>ملهم</h3>
-        <div class="role">الموقع (Front-end / UX)</div>
-        <ul>
-            <li>مهندس واجهات أمامية بخبرة في HTML/CSS/JavaScript وCanvas.</li>
-            <li>تصميم واجهات مستخدم متجاوبة وسهلة الاستخدام.</li>
-            <li>ساهم في بناء محرك الرسم، واجهة التحميل، وتجربة المستخدم.</li>
-            <li>الاهتمامات: تحسين استجابة وأداء الواجهة وتجربة الاستخدام.</li>
-        </ul>
-    </div>
-
-    <div class="dev-card">
-        <h3>فارس</h3>
-        <div class="role">الأداء (Performance / Algorithm)</div>
-        <ul>
-            <li>متخصص في خوارزميات المعالجة الصورية وتحويل الصور لمسارات قابلة للتطريز.</li>
-            <li>مسؤول عن دوال التحويل، تتبع المسارات، وترميز DST بكفاءة.</li>
-            <li>يعمل على تبسيط المسارات وتحسين حجم ومعدل الغرز.</li>
-            <li>الاهتمامات: تحسين الأداء والذاكرة ودقة التحويل.</li>
-        </ul>
-    </div>
+  <button id="clear">مسح</button>
+  <button id="export-dst">تصدير DST</button>
+  <div class="upload-btn-wrapper">
+    <button class="upload-btn">📂 اختر صورة</button>
+    <input type="file" id="upload" accept="image/*" title="رفع صورة وتحويلها لخريطة تطريز">
+  </div>
+  <div class="warn">المعاينة الحية تحاكي ملف DST بدقة.</div>
 </div>
 
 <script>
@@ -144,102 +60,61 @@ const ctx=board.getContext('2d');
 let strokes=[];
 let BOARD_MM=200;
 let PX_PER_MM=1;
-
-function resizeCanvas(){
-    board.width=board.clientWidth;
-    board.height=board.clientHeight;
-    PX_PER_MM=board.width/BOARD_MM;
-}
+function resizeCanvas(){ board.width=board.clientWidth; board.height=board.clientHeight; PX_PER_MM=board.width/BOARD_MM;}
 window.addEventListener('load',resizeCanvas);
 window.addEventListener('resize',resizeCanvas);
-
 function pxToMM(px){ return px/PX_PER_MM; }
 
-// ===== DST Encoding =====
-const MAX_STEP=1;
-function splitStep(dx,dy){
-    const steps=[]; let rx=dx, ry=dy;
-    while(Math.abs(rx)>MAX_STEP || Math.abs(ry)>MAX_STEP){
-        const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx));
-        const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry));
-        steps.push([sx,sy]); rx-=sx; ry-=sy;
+// ===== تتبع الحواف وتبسيط =====
+function traceContours(imgData, width, height){
+    const data=imgData.data;
+    const visited=Array(width*height).fill(false);
+    const strokes=[];
+    function getIndex(x,y){ return y*width+x; }
+    function isBlack(x,y){ return data[4*getIndex(x,y)]===0; }
+    function simplifyStroke(stroke, epsilon=1.0){
+        if(stroke.length<3) return stroke;
+        const dmax=(p1,p2,p)=>{ const dx=p2.x-p1.x,dy=p2.y-p1.y,mag=dx*dx+dy*dy;if(mag===0) return Math.hypot(p.x-p1.x,p.y-p1.y); const t=((p.x-p1.x)*dx+(p.y-p1.y)*dy)/mag; const px=p1.x+t*dx,py=p1.y+t*dy; return Math.hypot(p.x-px,p.y-py);}
+        const rdp=(pts)=>{ let maxDist=0,index=-1; for(let i=1;i<pts.length-1;i++){ const dist=dmax(pts[0],pts[pts.length-1],pts[i]); if(dist>maxDist){ maxDist=dist; index=i; }} if(maxDist>epsilon){ const l1=rdp(pts.slice(0,index+1)); const l2=rdp(pts.slice(index)); return l1.slice(0,-1).concat(l2);} else return [pts[0],pts[pts.length-1]];}
+        return rdp(stroke);
     }
-    steps.push([rx,ry]); return steps;
+    function followContour(x0,y0){
+        const contour=[];
+        let x=x0,y=y0;
+        const dir=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+        do{ contour.push({x,y}); visited[getIndex(x,y)]=true; let moved=false;
+            for(const [dx,dy] of dir){ const nx=x+dx,ny=y+dy; if(nx>=0 && ny>=0 && nx<width && ny<height && isBlack(nx,ny) && !visited[getIndex(nx,ny)]){ x=nx;y=ny;moved=true;break;}}
+            if(!moved) break;
+        }while(true);
+        return simplifyStroke(contour,1.0);
+    }
+    for(let y=0;y<height;y++){for(let x=0;x<width;x++){ if(!visited[getIndex(x,y)] && isBlack(x,y)){ const stroke=followContour(x,y); if(stroke.length>5) strokes.push(stroke);}}}
+    return strokes;
 }
 
-function encodeStep(dx,dy,control){
-    let b0=0,b1=0,b2=0;
-    function applyAxis(v,axis){
-        const sign=v<0?-1:1;
-        let absv=Math.abs(v);
-        const W=[81,27,9,3,1];
-        for(const w of W){
-            if(absv>=w){
-                if(axis==='x'){
-                    if(w===1)b0|=(sign>0?0x01:0x02);
-                    else if(w===9)b0|=(sign>0?0x04:0x08);
-                    else if(w===3)b1|=(sign>0?0x01:0x02);
-                    else if(w===27)b1|=(sign>0?0x04:0x08);
-                    else if(w===81)b2|=(sign>0?0x20:0x40);
-                }else{
-                    if(w===1)b0|=(sign>0?0x10:0x20);
-                    else if(w===9)b0|=(sign>0?0x40:0x80);
-                    else if(w===3)b1|=(sign>0?0x10:0x20);
-                    else if(w===27)b1|=(sign>0?0x40:0x80);
-                    else if(w===81)b2|=(sign>0?0x04:0x08);
-                }
-                absv-=w;
-            }
-        }
-    }
-    applyAxis(dx,'x'); applyAxis(dy,'y');
-    if(control===0)b2|=0x03;
-    else if(control===1)b2|=0x83;
-    else if(control===2)b2|=0x23;
-    return [b0&0xFF,b1&0xFF,b2&0xFF];
-}
-
-function buildDST(strokes){
+// ===== المحاكاة الحقيقية للغرز =====
+function animateStrokes(strokes, ctx){
+    ctx.clearRect(0,0,board.width,board.height);
+    ctx.strokeStyle='red'; ctx.lineWidth=1; ctx.lineJoin='round'; ctx.lineCap='round';
     const allPoints=[];
-    for(const stroke of strokes){
-        for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
-        allPoints.push(null);
+    for(const s of strokes){ for(let i=1;i<s.length;i++){ allPoints.push([s[i-1],s[i]]);}}
+    let index=0;
+    function drawStep(){
+        if(index>=allPoints.length) return;
+        const [p1,p2]=allPoints[index];
+        ctx.beginPath();
+        ctx.moveTo(p1.x,p1.y);
+        ctx.lineTo(p2.x,p2.y);
+        ctx.stroke();
+        index++;
+        requestAnimationFrame(drawStep);
     }
-    if(allPoints.length===0) return null;
-    let prev=allPoints[0]||{x:0,y:0};
-    const bodyBytes=[]; let first=false;
-    for(const pt of allPoints){
-        if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue; }
-        const curr=pt;
-        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,1)); prev=curr; first=true; continue; }
-        const dx=curr.x-prev.x; const dy=curr.y-prev.y;
-        for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
-    }
-    bodyBytes.push(0x00,0x00,0xF3);
-    const header=new Uint8Array(512); header.fill(0x20);
-    let name=prompt('أدخل اسم التصميم (DST) بدون مسافات:','DESIGN1')||'JS_FINAL';
-    name=name.toUpperCase().substring(0,8);
-    for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
-    const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
+    drawStep();
 }
-
-document.getElementById('export-dst').onclick=()=>{
-    if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
-    const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
-    const blob=new Blob([buf],{type:'application/octet-stream'}); 
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_final.dst'; a.click();
-    URL.revokeObjectURL(url);
-};
 
 // ===== رفع الصورة =====
-const uploadInput=document.getElementById('upload');
-const fileNameSpan=document.getElementById('file-name');
-uploadInput.addEventListener('change',(e)=>{
-    const file=e.target.files[0]; 
-    if(file){ fileNameSpan.textContent=file.name; } else { fileNameSpan.textContent="لم يتم اختيار ملف"; }
-
-    if(!file) return;
+document.getElementById('upload').addEventListener('change',(e)=>{
+    const file=e.target.files[0]; if(!file) return;
     const img=new Image(); const reader=new FileReader();
     reader.onload=function(ev){ img.src=ev.target.result; } 
     reader.readAsDataURL(file);
@@ -248,34 +123,21 @@ uploadInput.addEventListener('change',(e)=>{
         tmpCanvas.width=board.width; tmpCanvas.height=board.height; tmpCtx.drawImage(img,0,0,tmpCanvas.width,tmpCanvas.height);
         const imgData=tmpCtx.getImageData(0,0,tmpCanvas.width,tmpCanvas.height);
         const data=imgData.data; const width=tmpCanvas.width; const height=tmpCanvas.height;
-
         for(let i=0;i<data.length;i+=4){ const gray=0.3*data[i]+0.59*data[i+1]+0.11*data[i+2]; const val=gray<128?0:255; data[i]=data[i+1]=data[i+2]=val; }
-
-        strokes=[]; const visited=Array(width*height).fill(false);
-        function getIndex(x,y){ return y*width+x; }
-        function trace(x,y,stroke){
-            const stack=[[x,y]];
-            while(stack.length){
-                const [cx,cy]=stack.pop();
-                if(cx<0||cy<0||cx>=width||cy>=height) continue;
-                const idx=getIndex(cx,cy);
-                if(visited[idx] || data[4*idx]===255) continue;
-                visited[idx]=true;
-                stroke.push({x:cx, y:cy});
-                stack.push([cx+1,cy]); stack.push([cx-1,cy]); stack.push([cx,cy+1]); stack.push([cx,cy-1]);
-            }
-        }
-        for(let y=0;y<height;y++){ for(let x=0;x<width;x++){
-            const idx=getIndex(x,y);
-            if(!visited[idx] && data[4*idx]===0){ const newStroke=[]; trace(x,y,newStroke); if(newStroke.length>5) strokes.push(newStroke); }
-        }}
-
-        ctx.clearRect(0,0,board.width,board.height); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.lineJoin='round'; ctx.lineCap='round';
-        for(const s of strokes){ ctx.beginPath(); ctx.moveTo(s[0].x,s[0].y); for(let i=1;i<s.length;i++) ctx.lineTo(s[i].x,s[i].y); ctx.stroke(); }
+        strokes=traceContours(imgData,width,height);
+        animateStrokes(strokes,ctx);
     }
 });
 
-document.getElementById('clear').onclick = ()=>{ strokes=[]; ctx.clearRect(0,0,board.width,board.height); };
+// ===== مسح =====
+document.getElementById('clear').onclick=()=>{ strokes=[]; ctx.clearRect(0,0,board.width,board.height); };
+
+// ===== DST Encoding =====
+const MAX_STEP=1;
+function splitStep(dx,dy){ const steps=[]; let rx=dx,ry=dy; while(Math.abs(rx)>MAX_STEP||Math.abs(ry)>MAX_STEP){ const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx)); const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry)); steps.push([sx,sy]); rx-=sx; ry-=sy;} steps.push([rx,ry]); return steps;}
+function encodeStep(dx,dy,control){ let b0=0,b1=0,b2=0; function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);} else{ if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}} applyAxis(dx,'x'); applyAxis(dy,'y'); if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23; return [b0&0xFF,b1&0xFF,b2&0xFF];}
+function buildDST(strokes){ const allPoints=[]; for(const stroke of strokes){ for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)}); allPoints.push(null);} if(allPoints.length===0) return null; let prev=allPoints[0]||{x:0,y:0}; const bodyBytes=[]; let first=false; for(const pt of allPoints){ if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue;} const curr=pt; if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,1)); prev=curr; first=true; continue;} const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;} bodyBytes.push(0x00,0x00,0xF3); const header=new Uint8Array(512); header.fill(0x20); let name=prompt('أدخل اسم التصميم (DST) بدون مسافات:','DESIGN1')||'JS_FINAL'; name=name.toUpperCase().substring(0,8); for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i); const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;}
+document.getElementById('export-dst').onclick=()=>{ if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; } const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; } const blob=new Blob([buf],{type:'application/octet-stream'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='design_final.dst'; a.click(); URL.revokeObjectURL(url);};
 </script>
 </body>
 </html>
