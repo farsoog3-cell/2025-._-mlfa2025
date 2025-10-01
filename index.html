@@ -10,23 +10,36 @@ header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-al
 #main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
 canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
 #board { width:80vmin; height:80vmin;}
-.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; box-shadow:0 -2px 5px rgba(0,0,0,0.05); flex-wrap:wrap;}
-button, input { padding:8px 12px; margin:5px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; }
-button { background:#4b6cb7; color:#fff; font-weight:600; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-button:hover { background:#182848;}
-input[type=file] { cursor:pointer; }
+.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; box-shadow:0 -2px 5px rgba(0,0,0,0.05); flex-wrap:wrap; gap:8px; }
+button { padding:8px 12px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; background:#4b6cb7; color:#fff; font-weight:600; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+button:hover { background:#182848; }
+
+/* زر رفع احترافي */
+.upload-label {
+    background: linear-gradient(90deg,#4b6cb7,#182848);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+.upload-label:hover {
+    background: #182848;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+}
+#file-name {
+    font-size: 0.9em;
+    color: #333;
+    min-width:120px;
+    text-align:right;
+}
 .warn { color:#d00; font-size:0.85em; margin-left:15px; }
-
-/* قسم السيرة الذاتية */
-.devs { width:100%; background:transparent; display:flex; justify-content:center; gap:18px; padding:18px; box-sizing:border-box; flex-wrap:wrap; }
-.dev-card { background:#fff; border-radius:14px; box-shadow:0 6px 18px rgba(24,40,72,0.08); padding:16px; width:320px; border:1px solid #e6e9ef; }
-.dev-card h3 { margin:0 0 6px 0; font-size:1.1em; color:#182848; }
-.dev-card .role { font-size:0.95em; color:#4b6cb7; margin-bottom:8px; font-weight:600; }
-.dev-card ul { margin:8px 0 0 18px; padding:0; color:#333; font-size:0.95em; }
-.dev-card li { margin-bottom:6px; }
-
-/* ترويض النص بالعربية للعرض */
-.bio-title { text-align:center; margin-top:12px; font-weight:700; color:#182848; }
 </style>
 </head>
 <body>
@@ -37,15 +50,20 @@ input[type=file] { cursor:pointer; }
 <div class="controls">
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <input type="file" id="upload" accept="image/*" title="رفع صورة وتحويلها لخريطة تطريز">
+
+    <!-- زر رفع ملف احترافي -->
+    <label for="upload" class="upload-label">📂 رفع صورة</label>
+    <input type="file" id="upload" accept="image/*" hidden>
+    <span id="file-name">لم يتم اختيار ملف</span>
+
     <div class="warn">الصورة تتحول إلى مخطط تطريز مفهوم للماكينة.</div>
 </div>
 
-<!-- قسم السيرة الذاتية للمطورين -->
+<!-- السيرة الذاتية -->
 <div class="bio-title">سير ذاتية — فريق التطوير</div>
 <div class="devs">
     <div class="dev-card">
-        <h3>ملهم</h3>
+        <h3>فارس</h3>
         <div class="role">الموقع (Front-end / UX)</div>
         <ul>
             <li>مهندس واجهات أمامية بخبرة في HTML/CSS/JavaScript وCanvas.</li>
@@ -54,9 +72,8 @@ input[type=file] { cursor:pointer; }
             <li>الاهتمامات: تحسين استجابة وأداء الواجهة وتجربة الاستخدام.</li>
         </ul>
     </div>
-
     <div class="dev-card">
-        <h3>فارس</h3>
+        <h3>ملهم</h3>
         <div class="role">الأداء (Performance / Algorithm)</div>
         <ul>
             <li>متخصص في خوارزميات المعالجة الصورية وتحويل الصور إلى مسارات قابلة للتطريز.</li>
@@ -77,7 +94,6 @@ let PX_PER_MM=1;
 function resizeCanvas(){
     board.width=board.clientWidth;
     board.height=board.clientHeight;
-    // مقياس محسّن: نستخدم أصغر البعدين للحفاظ على النسبة
     PX_PER_MM = Math.min(board.width, board.height) / BOARD_MM;
 }
 window.addEventListener('load',resizeCanvas);
@@ -96,7 +112,6 @@ function splitStep(dx,dy){
     }
     steps.push([rx,ry]); return steps;
 }
-
 function encodeStep(dx,dy,control){
     let b0=0,b1=0,b2=0;
     function applyAxis(v,axis){
@@ -128,7 +143,6 @@ function encodeStep(dx,dy,control){
     else if(control===2)b2|=0x23;
     return [b0&0xFF,b1&0xFF,b2&0xFF];
 }
-
 function buildDST(strokes){
     const allPoints=[];
     for(const stroke of strokes){
@@ -147,11 +161,9 @@ function buildDST(strokes){
     }
     bodyBytes.push(0x00,0x00,0xF3);
     const header=new Uint8Array(512); header.fill(0x20);
-    let name = 'MLFA2025'; // اسم افتراضي بدون نافذة prompt
-    // نضع الاسم في أول 8 بايت من الهيدر
+    let name = 'MLFA2025';
     name = name.toUpperCase().substring(0,8);
     for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
-    // (اختصاري) يمكن إضافة حقول تكميلية هنا مثل أبعاد التصميم، وعدد الغرز، الخ.
     const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
@@ -165,8 +177,15 @@ document.getElementById('export-dst').onclick=()=>{
 };
 
 // ===== رفع الصورة وتحويلها لخريطة تطريز ذكية =====
-document.getElementById('upload').addEventListener('change',function(e){
-    const file=e.target.files[0]; if(!file) return;
+const uploadInput = document.getElementById('upload');
+const fileNameSpan = document.getElementById('file-name');
+
+uploadInput.addEventListener('change', function(){
+    const file=uploadInput.files[0];
+    if(file){ fileNameSpan.textContent=file.name; }
+    else { fileNameSpan.textContent="لم يتم اختيار ملف"; }
+
+    if(!file) return;
     const img=new Image(); const reader=new FileReader();
     reader.onload=function(ev){ img.src=ev.target.result; } 
     reader.readAsDataURL(file);
@@ -176,10 +195,10 @@ document.getElementById('upload').addEventListener('change',function(e){
         const imgData=tmpCtx.getImageData(0,0,tmpCanvas.width,tmpCanvas.height);
         const data=imgData.data; const width=tmpCanvas.width; const height=tmpCanvas.height;
 
-        // تحويل للصورة إلى أسود/أبيض (عتبة بسيطة)
+        // تحويل للصورة إلى أسود/أبيض
         for(let i=0;i<data.length;i+=4){ const gray=0.3*data[i]+0.59*data[i+1]+0.11*data[i+2]; const val=gray<128?0:255; data[i]=data[i+1]=data[i+2]=val; }
 
-        // إنشاء خريطة ماكينة ذكية (flood-fill tracing)
+        // إنشاء خريطة ماكينة
         strokes=[]; const visited=Array(width*height).fill(false);
         function getIndex(x,y){ return y*width+x; }
         function trace(x,y,stroke){
@@ -199,8 +218,8 @@ document.getElementById('upload').addEventListener('change',function(e){
             if(!visited[idx] && data[4*idx]===0){ const newStroke=[]; trace(x,y,newStroke); if(newStroke.length>5) strokes.push(newStroke); }
         }}
 
-        // عرض المخطط على اللوحة
-        ctx.clearRect(0,0,board.width,board.height); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.lineJoin='round'; ctx.lineCap='round';
+        // عرض المخطط
+        ctx.clearRect(0,0,board.width,board.height); ctx.strokeStyle='#000'; ctx.lineWidth=1;
         for(const s of strokes){ ctx.beginPath(); ctx.moveTo(s[0].x,s[0].y); for(let i=1;i<s.length;i++) ctx.lineTo(s[i].x,s[i].y); ctx.stroke(); }
     }
 });
