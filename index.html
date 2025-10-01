@@ -17,7 +17,7 @@ button:hover { background:#182848;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST دقيقة 1:1</header>
+<header>لوحة رسم DST دقيقة 1:1 مع حل الدوائر</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
     <button id="undo">تراجع</button>
@@ -106,18 +106,30 @@ function drawStroke(st){
 document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
-// ===== DST الذكي 1:1 =====
+// ===== DST الذكي 1:1 مع interpolation =====
 const MAX_STEP = 0.1; // دقة قصوى لكل خطوة (ملم)
 
-function splitStep(dx,dy){
-    const steps=[]; let rx=dx, ry=dy;
-    while(Math.abs(rx)>MAX_STEP || Math.abs(ry)>MAX_STEP){
-        const sx=Math.max(-MAX_STEP, Math.min(MAX_STEP, rx));
-        const sy=Math.max(-MAX_STEP, Math.min(MAX_STEP, ry));
-        steps.push([sx,sy]); rx-=sx; ry-=sy;
+// توليد نقاط إضافية بين نقطتين بعيدتين
+function interpolatePoints(p1,p2){
+    const points = [];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const steps = Math.ceil(dist / MAX_STEP);
+    for(let i=1;i<=steps;i++){
+        points.push({x:p1.x + dx*i/steps, y:p1.y + dy*i/steps});
     }
-    steps.push([rx,ry]); 
-    return steps;
+    return points;
+}
+
+function splitStroke(stroke){
+    if(!stroke || stroke.length<2) return stroke;
+    const newStroke = [stroke[0]];
+    for(let i=1;i<stroke.length;i++){
+        const interpolated = interpolatePoints(newStroke[newStroke.length-1], stroke[i]);
+        newStroke.push(...interpolated);
+    }
+    return newStroke;
 }
 
 function encodeStep(dx,dy,control){
@@ -145,7 +157,8 @@ function encodeStep(dx,dy,control){
 function buildDST(strokes){
     const allPoints=[];
     for(const stroke of strokes){
-        for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
+        const detailed = splitStroke(stroke);
+        for(const p of detailed) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
         allPoints.push(null);
     }
     if(allPoints.length===0) return null;
@@ -154,9 +167,9 @@ function buildDST(strokes){
     for(const pt of allPoints){
         if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue; }
         const curr=pt;
-        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,1)); prev=curr; first=true; continue; }
+        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; bodyBytes.push(...encodeStep(dx,dy,1)); prev=curr; first=true; continue; }
         const dx=curr.x-prev.x; const dy=curr.y-prev.y;
-        for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
+        bodyBytes.push(...encodeStep(dx,dy,0)); prev=curr;
     }
     bodyBytes.push(0x00,0x00,0xF3);
     const header=new Uint8Array(512); header.fill(0x20); const name='JS_DST_1to1'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
