@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة رسم DST دقيقة 1:1</title>
 <style>
-body, html { margin:0; padding:0; height:100%; width:100%; font-family: 'Segoe UI', sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
+body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
 canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
@@ -17,74 +17,73 @@ button:hover { background:#182848;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST دقيقة 1:1 مع حل الدوائر</header>
+<header>لوحة رسم DST دقيقة 1:1 حقيقية</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
-    <button id="undo">تراجع</button>
-    <button id="clear">مسح</button>
-    <button id="export-dst">تصدير DST</button>
-    <div class="warn">كل شيء ترسمه سيظهر في الملف بالحجم الحقيقي والدقة الكاملة.</div>
+<button id="undo">تراجع</button>
+<button id="clear">مسح</button>
+<button id="export-dst">تصدير DST</button>
+<div class="warn">كل شيء ترسمه يظهر في الملف بالحجم الحقيقي والدقة الكاملة.</div>
 </div>
 
 <script>
-const board = document.getElementById('board');
-const ctx = board.getContext('2d');
-let strokes=[], current=[], drawing=false;
+const board=document.getElementById('board');
+const ctx=board.getContext('2d');
+let strokes=[],current=[],drawing=false;
 
-// ===== إعداد التحجيم =====
-let BOARD_MM = 200;  // حجم اللوحة الفعلي بالملم
-let PX_PER_MM = 1;
+let BOARD_MM=200;
+let PX_PER_MM=1;
 
 function resizeCanvas(){
-    board.width = board.clientWidth;
-    board.height = board.clientHeight;
-    PX_PER_MM = board.width / BOARD_MM;
+    board.width=board.clientWidth;
+    board.height=board.clientHeight;
+    PX_PER_MM=board.width/BOARD_MM;
     redraw();
 }
 
-window.addEventListener('load', resizeCanvas);
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load',resizeCanvas);
+window.addEventListener('resize',resizeCanvas);
 
-function pxToMM(px){ return px / PX_PER_MM; }
-function mmToPx(mm){ return mm * PX_PER_MM; }
+function pxToMM(px){ return px/PX_PER_MM; }
+function mmToPx(mm){ return mm*PX_PER_MM; }
 
-// ===== شبكة الرسم =====
-const GRID_STEP_MM = 5;
+// شبكة رسم
+const GRID_STEP_MM=5;
 function drawGrid(){
     ctx.strokeStyle='#eee';
     ctx.lineWidth=0.5;
-    const stepPx = mmToPx(GRID_STEP_MM);
-    for(let x=0;x<=board.width;x+=stepPx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,board.height); ctx.stroke(); }
-    for(let y=0;y<=board.height;y+=stepPx){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(board.width,y); ctx.stroke(); }
+    const stepPx=mmToPx(GRID_STEP_MM);
+    for(let x=0;x<=board.width;x+=stepPx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,board.height); ctx.stroke();}
+    for(let y=0;y<=board.height;y+=stepPx){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(board.width,y); ctx.stroke();}
 }
 
-// ===== أحداث الرسم =====
+// أحداث الرسم
 function start(x,y){ drawing=true; current=[{x,y}]; }
 function move(x,y){ 
-    if(!drawing) return; 
-    const last = current[current.length-1];
-    const dx = x - last.x, dy = y - last.y;
-    if(Math.sqrt(dx*dx + dy*dy) < 0.01) return; // سجل كل نقطة حرفيًا
-    current.push({x,y}); 
-    redraw(); 
+    if(!drawing) return;
+    const last=current[current.length-1];
+    const dx=x-last.x,dy=y-last.y;
+    if(Math.sqrt(dx*dx+dy*dy)<0.01) return;
+    current.push({x,y});
+    redraw();
 }
 function end(){ 
-    if(!drawing) return; 
-    drawing=false; 
-    if(current.length) strokes.push(current); 
-    current=[]; 
-    redraw(); 
+    if(!drawing) return;
+    drawing=false;
+    if(current.length) strokes.push(current);
+    current=[];
+    redraw();
 }
 
-board.addEventListener('mousedown', e=>{ const r=board.getBoundingClientRect(); start(e.clientX-r.left,e.clientY-r.top); });
-window.addEventListener('mousemove', e=>{ if(!drawing) return; const r=board.getBoundingClientRect(); move(e.clientX-r.left,e.clientY-r.top); });
-window.addEventListener('mouseup', end);
+board.addEventListener('mousedown',e=>{ const r=board.getBoundingClientRect(); start(e.clientX-r.left,e.clientY-r.top); });
+window.addEventListener('mousemove',e=>{ if(!drawing) return; const r=board.getBoundingClientRect(); move(e.clientX-r.left,e.clientY-r.top); });
+window.addEventListener('mouseup',end);
 
-board.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.touches[0]; const r=board.getBoundingClientRect(); start(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
-board.addEventListener('touchmove', e=>{ e.preventDefault(); const t=e.touches[0]; const r=board.getBoundingClientRect(); move(t.clientX-r.left,t.clientY-r.top); }, {passive:false});
-board.addEventListener('touchend', e=>{ e.preventDefault(); end(); }, {passive:false});
+board.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.touches[0]; const r=board.getBoundingClientRect(); start(t.clientX-r.left,t.clientY-r.top); },{passive:false});
+board.addEventListener('touchmove',e=>{ e.preventDefault(); const t=e.touches[0]; const r=board.getBoundingClientRect(); move(t.clientX-r.left,t.clientY-r.top); },{passive:false});
+board.addEventListener('touchend',e=>{ e.preventDefault(); end(); },{passive:false});
 
-// ===== إعادة الرسم =====
+// إعادة الرسم
 function redraw(){
     ctx.clearRect(0,0,board.width,board.height);
     drawGrid();
@@ -96,37 +95,36 @@ function redraw(){
     drawStroke(current);
 }
 function drawStroke(st){ 
-    if(!st || st.length<2) return; 
-    ctx.beginPath(); 
-    ctx.moveTo(st[0].x,st[0].y); 
-    for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x,st[i].y); 
-    ctx.stroke(); 
+    if(!st || st.length<2) return;
+    ctx.beginPath();
+    ctx.moveTo(st[0].x,st[0].y);
+    for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x,st[i].y);
+    ctx.stroke();
 }
 
-document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
-document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
+document.getElementById('clear').onclick=()=>{ strokes=[]; current=[]; redraw(); };
+document.getElementById('undo').onclick=()=>{ strokes.pop(); redraw(); };
 
-// ===== DST الذكي 1:1 مع interpolation =====
-const MAX_STEP = 0.1; // دقة قصوى لكل خطوة (ملم)
+// ===== DST الذكي مع توليد نقاط دقيقة =====
+const MAX_STEP=0.05;
 
-// توليد نقاط إضافية بين نقطتين بعيدتين
 function interpolatePoints(p1,p2){
-    const points = [];
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const steps = Math.ceil(dist / MAX_STEP);
+    const points=[];
+    const dx=p2.x-p1.x;
+    const dy=p2.y-p1.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    const steps=Math.ceil(dist/MAX_STEP);
     for(let i=1;i<=steps;i++){
-        points.push({x:p1.x + dx*i/steps, y:p1.y + dy*i/steps});
+        points.push({x:p1.x+dx*i/steps, y:p1.y+dy*i/steps});
     }
     return points;
 }
 
 function splitStroke(stroke){
     if(!stroke || stroke.length<2) return stroke;
-    const newStroke = [stroke[0]];
+    const newStroke=[stroke[0]];
     for(let i=1;i<stroke.length;i++){
-        const interpolated = interpolatePoints(newStroke[newStroke.length-1], stroke[i]);
+        const interpolated=interpolatePoints(newStroke[newStroke.length-1], stroke[i]);
         newStroke.push(...interpolated);
     }
     return newStroke;
@@ -134,17 +132,25 @@ function splitStroke(stroke){
 
 function encodeStep(dx,dy,control){
     let b0=0,b1=0,b2=0;
-    function applyAxis(v,axis){ 
-        const sign=v<0?-1:1; 
-        let absv=Math.abs(Math.round(v)); 
-        const W=[81,27,9,3,1]; 
-        for(const w of W){ 
-            if(absv>=w){ 
-                if(axis==='x'){ 
-                    if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);
-                } else { 
-                    if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);
-                } 
+    function applyAxis(v,axis){
+        const sign=v<0?-1:1;
+        let absv=Math.abs(Math.round(v));
+        const W=[81,27,9,3,1];
+        for(const w of W){
+            if(absv>=w){
+                if(axis==='x'){
+                    if(w===1)b0|=(sign>0?0x01:0x02);
+                    else if(w===9)b0|=(sign>0?0x04:0x08);
+                    else if(w===3)b1|=(sign>0?0x01:0x02);
+                    else if(w===27)b1|=(sign>0?0x04:0x08);
+                    else if(w===81)b2|=(sign>0?0x20:0x40);
+                } else{
+                    if(w===1)b0|=(sign>0?0x10:0x20);
+                    else if(w===9)b0|=(sign>0?0x40:0x80);
+                    else if(w===3)b1|=(sign>0?0x10:0x20);
+                    else if(w===27)b1|=(sign>0?0x40:0x80);
+                    else if(w===81)b2|=(sign>0?0x04:0x08);
+                }
                 absv-=w;
             }
         }
@@ -157,17 +163,18 @@ function encodeStep(dx,dy,control){
 function buildDST(strokes){
     const allPoints=[];
     for(const stroke of strokes){
-        const detailed = splitStroke(stroke);
-        for(const p of detailed) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
+        const detailed=splitStroke(stroke);
+        for(const p of detailed) allPoints.push({x:pxToMM(p.x), y:pxToMM(p.y)});
         allPoints.push(null);
     }
     if(allPoints.length===0) return null;
     let prev=allPoints[0]||{x:0,y:0};
-    const bodyBytes=[]; let first=false;
+    const bodyBytes=[];
+    let first=false;
     for(const pt of allPoints){
-        if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue; }
+        if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue;}
         const curr=pt;
-        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; bodyBytes.push(...encodeStep(dx,dy,1)); prev=curr; first=true; continue; }
+        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; bodyBytes.push(...encodeStep(dx,dy,1)); prev=curr; first=true; continue;}
         const dx=curr.x-prev.x; const dy=curr.y-prev.y;
         bodyBytes.push(...encodeStep(dx,dy,0)); prev=curr;
     }
@@ -177,10 +184,14 @@ function buildDST(strokes){
 }
 
 document.getElementById('export-dst').onclick=()=>{
-    if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
-    const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
-    const blob=new Blob([buf],{type:'application/octet-stream'}); const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_1to1.dst'; a.click();
+    if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return;}
+    const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return;}
+    const blob=new Blob([buf],{type:'application/octet-stream'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='design_true_1to1.dst';
+    a.click();
     URL.revokeObjectURL(url);
 };
 
