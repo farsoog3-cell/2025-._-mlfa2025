@@ -3,149 +3,167 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>محول صورة إلى DST AI مباشر</title>
+<title>خريطة تطريز ذكية مع تصدير DST</title>
 <style>
-body, html { margin:0; padding:0; font-family:'Segoe UI',sans-serif; background:#f5f5f7; display:flex; flex-direction:column; height:100%; }
-header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:20px; font-size:1.5em; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-#main { flex:1; display:flex; justify-content:center; align-items:center; padding:20px; }
-canvas { background:#fff; border:2px solid #ccc; border-radius:15px; }
-.controls { display:flex; justify-content:center; padding:15px; flex-wrap:wrap; background:#fff; border-top:1px solid #ddd; box-shadow:0 -2px 5px rgba(0,0,0,0.1);}
-button,input { margin:5px; padding:10px 15px; border:none; border-radius:12px; cursor:pointer; font-size:1em; }
-button { background:linear-gradient(90deg,#4b6cb7,#182848); color:#fff; transition:0.3s; }
-button:hover { background:linear-gradient(90deg,#182848,#4b6cb7); }
-.warn { color:#d00; margin-left:10px; font-size:0.9em; }
+body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
+header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
+canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
+#board { width:80vmin; height:80vmin;}
+.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; box-shadow:0 -2px 5px rgba(0,0,0,0.05); flex-wrap:wrap;}
+button, input { padding:8px 12px; margin:5px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; }
+button { background:#4b6cb7; color:#fff; font-weight:600; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+button:hover { background:#182848;}
+input[type=file] { cursor:pointer; }
+.warn { color:#d00; font-size:0.85em; margin-left:15px;}
 </style>
 </head>
 <body>
-<header>محول صورة إلى DST مباشر AI</header>
-<div id="main">
-    <canvas id="board" width="600" height="600"></canvas>
-</div>
+<header>خريطة تطريز ذكية مع تصدير DST</header>
+<div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
-    <button id="clear">مسح اللوحة</button>
+    <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <input type="file" id="upload" accept="image/*">
-    <div class="warn">يتم إنشاء مخطط خيوط ذكي واحترافي قبل التصدير</div>
+    <input type="file" id="upload" accept="image/*" title="رفع صورة وتحويلها لخريطة تطريز">
+    <div class="warn">الصورة تتحول إلى مخطط تطريز مفهوم للماكينة.</div>
 </div>
 
 <script>
-const API_KEY = "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";
+const board=document.getElementById('board');
+const ctx=board.getContext('2d');
+let strokes=[];
+let BOARD_MM=200;
+let PX_PER_MM=1;
 
-const board = document.getElementById('board');
-const ctx = board.getContext('2d');
-let strokes = [];
+function resizeCanvas(){
+    board.width=board.clientWidth;
+    board.height=board.clientHeight;
+    PX_PER_MM=board.width/BOARD_MM;
+}
+window.addEventListener('load',resizeCanvas);
+window.addEventListener('resize',resizeCanvas);
 
-function pxToMM(px){ return px; }
+function pxToMM(px){ return px/PX_PER_MM; }
 
-function buildDST(stitches){
-    if(!stitches || stitches.length===0) return null;
-    const MAX_STEP=1;
-    const encodeStep=(dx,dy,control)=>{
-        let b0=0,b1=0,b2=0;
-        function applyAxis(v,axis){
-            const sign=v<0?-1:1; let absv=Math.abs(v);
-            const W=[81,27,9,3,1];
-            for(const w of W){
-                if(absv>=w){
-                    if(axis==='x'){ 
-                        if(w===1)b0|=(sign>0?0x01:0x02);
-                        else if(w===9)b0|=(sign>0?0x04:0x08);
-                        else if(w===3)b1|=(sign>0?0x01:0x02);
-                        else if(w===27)b1|=(sign>0?0x04:0x08);
-                        else if(w===81)b2|=(sign>0?0x20:0x40);
-                    } else {
-                        if(w===1)b0|=(sign>0?0x10:0x20);
-                        else if(w===9)b0|=(sign>0?0x40:0x80);
-                        else if(w===3)b1|=(sign>0?0x10:0x20);
-                        else if(w===27)b1|=(sign>0?0x40:0x80);
-                        else if(w===81)b2|=(sign>0?0x04:0x08);
-                    }
-                    absv-=w;
+// ===== DST Encoding =====
+const MAX_STEP=1;
+function splitStep(dx,dy){
+    const steps=[]; let rx=dx, ry=dy;
+    while(Math.abs(rx)>MAX_STEP || Math.abs(ry)>MAX_STEP){
+        const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx));
+        const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry));
+        steps.push([sx,sy]); rx-=sx; ry-=sy;
+    }
+    steps.push([rx,ry]); return steps;
+}
+
+function encodeStep(dx,dy,control){
+    let b0=0,b1=0,b2=0;
+    function applyAxis(v,axis){
+        const sign=v<0?-1:1;
+        let absv=Math.abs(v);
+        const W=[81,27,9,3,1];
+        for(const w of W){
+            if(absv>=w){
+                if(axis==='x'){
+                    if(w===1)b0|=(sign>0?0x01:0x02);
+                    else if(w===9)b0|=(sign>0?0x04:0x08);
+                    else if(w===3)b1|=(sign>0?0x01:0x02);
+                    else if(w===27)b1|=(sign>0?0x04:0x08);
+                    else if(w===81)b2|=(sign>0?0x20:0x40);
+                }else{
+                    if(w===1)b0|=(sign>0?0x10:0x20);
+                    else if(w===9)b0|=(sign>0?0x40:0x80);
+                    else if(w===3)b1|=(sign>0?0x10:0x20);
+                    else if(w===27)b1|=(sign>0?0x40:0x80);
+                    else if(w===81)b2|=(sign>0?0x04:0x08);
                 }
+                absv-=w;
             }
         }
-        applyAxis(dx,'x'); applyAxis(dy,'y');
-        if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23;
-        return [b0&0xFF,b1&0xFF,b2&0xFF];
     }
+    applyAxis(dx,'x'); applyAxis(dy,'y');
+    if(control===0)b2|=0x03;
+    else if(control===1)b2|=0x83;
+    else if(control===2)b2|=0x23;
+    return [b0&0xFF,b1&0xFF,b2&0xFF];
+}
 
-    const bodyBytes=[];
-    let prev=stitches[0];
-    for(const curr of stitches){
-        const dx=curr.x-prev.x;
-        const dy=curr.y-prev.y;
-        bodyBytes.push(...encodeStep(dx,dy,0));
-        prev=curr;
+function buildDST(strokes){
+    const allPoints=[];
+    for(const stroke of strokes){
+        for(const p of stroke) allPoints.push({x:pxToMM(p.x),y:pxToMM(p.y)});
+        allPoints.push(null);
+    }
+    if(allPoints.length===0) return null;
+    let prev=allPoints[0]||{x:0,y:0};
+    const bodyBytes=[]; let first=false;
+    for(const pt of allPoints){
+        if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue; }
+        const curr=pt;
+        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,1)); prev=curr; first=true; continue; }
+        const dx=curr.x-prev.x; const dy=curr.y-prev.y;
+        for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
     }
     bodyBytes.push(0x00,0x00,0xF3);
-
     const header=new Uint8Array(512); header.fill(0x20);
-    const name='MLFA2025.99';
+    let name=prompt('أدخل اسم التصميم (DST) بدون مسافات:','DESIGN1')||'JS_FINAL';
+    name=name.toUpperCase().substring(0,8);
     for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
-    const buf=new Uint8Array(512+bodyBytes.length);
-    buf.set(header,0);
-    buf.set(new Uint8Array(bodyBytes),512);
-    return buf.buffer;
+    const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
-// ==== إرسال الصورة مباشرة إلى OpenAI ====
-async function sendToAI(imageBase64){
-    const response = await fetch("https://api.openai.com/v1/responses", {
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer "+API_KEY
-        },
-        body: JSON.stringify({
-            model: "gpt-4.1-mini",
-            input: `حول هذه الصورة إلى مخطط DST احترافي JSON من نقاط الإبرة: ${imageBase64}`
-        })
-    });
-    const data = await response.json();
-    // توقع أن النموذج يعطي JSON مباشرة
-    try { 
-        return JSON.parse(data.output_text || data.output[0].content[0].text); 
-    } catch(e){ 
-        alert("خطأ في قراءة البيانات من AI"); 
-        return [];
-    }
-}
+document.getElementById('export-dst').onclick=()=>{
+    if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
+    const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
+    const blob=new Blob([buf],{type:'application/octet-stream'}); 
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='design_final.dst'; a.click();
+    URL.revokeObjectURL(url);
+};
 
-document.getElementById('upload').addEventListener('change', async function(e){
-    const file = e.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = async function(ev){
-        const imageBase64 = ev.target.result.split(',')[1];
-
-        strokes = await sendToAI(imageBase64);
-
-        // رسم المخطط
-        ctx.clearRect(0,0,board.width,board.height);
-        ctx.strokeStyle='#000';
-        ctx.lineWidth=1;
-        ctx.lineJoin='round';
-        ctx.lineCap='round';
-        if(strokes.length>0){
-            ctx.beginPath(); ctx.moveTo(strokes[0].x,strokes[0].y);
-            for(let i=1;i<strokes.length;i++) ctx.lineTo(strokes[i].x,strokes[i].y);
-            ctx.stroke();
-        }
-    };
+// ===== رفع الصورة وتحويلها لخريطة تطريز ذكية =====
+document.getElementById('upload').addEventListener('change',function(e){
+    const file=e.target.files[0]; if(!file) return;
+    const img=new Image(); const reader=new FileReader();
+    reader.onload=function(ev){ img.src=ev.target.result; } 
     reader.readAsDataURL(file);
+    img.onload=function(){
+        const tmpCanvas=document.createElement('canvas'); const tmpCtx=tmpCanvas.getContext('2d');
+        tmpCanvas.width=board.width; tmpCanvas.height=board.height; tmpCtx.drawImage(img,0,0,tmpCanvas.width,tmpCanvas.height);
+        const imgData=tmpCtx.getImageData(0,0,tmpCanvas.width,tmpCanvas.height);
+        const data=imgData.data; const width=tmpCanvas.width; const height=tmpCanvas.height;
+
+        // تحويل للصورة إلى أسود/أبيض
+        for(let i=0;i<data.length;i+=4){ const gray=0.3*data[i]+0.59*data[i+1]+0.11*data[i+2]; const val=gray<128?0:255; data[i]=data[i+1]=data[i+2]=val; }
+
+        // إنشاء خريطة ماكينة ذكية
+        strokes=[]; const visited=Array(width*height).fill(false);
+        function getIndex(x,y){ return y*width+x; }
+        function trace(x,y,stroke){
+            const stack=[[x,y]];
+            while(stack.length){
+                const [cx,cy]=stack.pop();
+                if(cx<0||cy<0||cx>=width||cy>=height) continue;
+                const idx=getIndex(cx,cy);
+                if(visited[idx] || data[4*idx]===255) continue;
+                visited[idx]=true;
+                stroke.push({x:cx, y:cy});
+                stack.push([cx+1,cy]); stack.push([cx-1,cy]); stack.push([cx,cy+1]); stack.push([cx,cy-1]);
+            }
+        }
+        for(let y=0;y<height;y++){ for(let x=0;x<width;x++){
+            const idx=getIndex(x,y);
+            if(!visited[idx] && data[4*idx]===0){ const newStroke=[]; trace(x,y,newStroke); if(newStroke.length>5) strokes.push(newStroke); }
+        }}
+
+        // عرض المخطط على اللوحة
+        ctx.clearRect(0,0,board.width,board.height); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.lineJoin='round'; ctx.lineCap='round';
+        for(const s of strokes){ ctx.beginPath(); ctx.moveTo(s[0].x,s[0].y); for(let i=1;i<s.length;i++) ctx.lineTo(s[i].x,s[i].y); ctx.stroke(); }
+    }
 });
 
 document.getElementById('clear').onclick = ()=>{ strokes=[]; ctx.clearRect(0,0,board.width,board.height); };
-document.getElementById('export-dst').onclick = ()=>{
-    if(strokes.length===0){ alert('ارفع صورة أولاً'); return; }
-    const buf = buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
-    const blob = new Blob([buf], {type:'application/octet-stream'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download='mlfa2025.99.dst';
-    a.click();
-    URL.revokeObjectURL(url);
-};
 </script>
 </body>
 </html>
