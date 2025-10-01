@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة رسم DST دقيقة ومرنة</title>
+<title>لوحة رسم DST دقيقة 1:1</title>
 <style>
-body, html { margin:0; padding:0; height:100%; width:100%; font-family: 'Segoe UI', sans-serif; display:flex; flex-direction:column; background: #f0f2f5;}
-header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding: 15px 0; font-size: 1.4em; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.2);}
+body, html { margin:0; padding:0; height:100%; width:100%; font-family: 'Segoe UI', sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
+header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
-canvas { display:block; background:#fff; border-radius:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
+canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
 #board { width:80vmin; height:80vmin;}
-.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); flex-wrap: wrap;}
-button { padding:10px 16px; margin:5px; border-radius:12px; border:none; background: #4b6cb7; color:#fff; font-weight:600; cursor:pointer; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
+.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; box-shadow:0 -2px 5px rgba(0,0,0,0.05); flex-wrap: wrap;}
+button { padding:10px 16px; margin:5px; border-radius:12px; border:none; background:#4b6cb7; color:#fff; font-weight:600; cursor:pointer; transition:0.3s; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
 button:hover { background:#182848;}
 .warn { color:#d00; font-size:0.85em; margin-left:15px;}
 </style>
 </head>
 <body>
-<header>لوحة رسم DST دقيقة ومرنة</header>
+<header>لوحة رسم DST دقيقة 1:1</header>
 <div id="main"><canvas id="board"></canvas></div>
 <div class="controls">
     <button id="undo">تراجع</button>
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
-    <div class="warn">كل ما ترسمه سيظهر في ملف DST بدقة عالية.</div>
+    <div class="warn">كل شيء ترسمه سيظهر في الملف بالحجم الحقيقي والدقة الكاملة.</div>
 </div>
 
 <script>
@@ -32,7 +32,7 @@ const ctx = board.getContext('2d');
 let strokes=[], current=[], drawing=false;
 
 // ===== إعداد التحجيم =====
-let BOARD_MM = 200;  
+let BOARD_MM = 200;  // حجم اللوحة الفعلي بالملم
 let PX_PER_MM = 1;
 
 function resizeCanvas(){
@@ -49,7 +49,7 @@ function pxToMM(px){ return px / PX_PER_MM; }
 function mmToPx(mm){ return mm * PX_PER_MM; }
 
 // ===== شبكة الرسم =====
-const GRID_STEP_MM = 1;
+const GRID_STEP_MM = 5;
 function drawGrid(){
     ctx.strokeStyle='#eee';
     ctx.lineWidth=0.5;
@@ -60,15 +60,21 @@ function drawGrid(){
 
 // ===== أحداث الرسم =====
 function start(x,y){ drawing=true; current=[{x,y}]; }
-function move(x,y){ if(!drawing) return; 
+function move(x,y){ 
+    if(!drawing) return; 
     const last = current[current.length-1];
-    // تجاهل النقاط القريبة جدًا لتجنب مشاكل الخطوط المستقيمة
     const dx = x - last.x, dy = y - last.y;
-    if(Math.sqrt(dx*dx + dy*dy) < 0.5) return;
+    if(Math.sqrt(dx*dx + dy*dy) < 0.01) return; // سجل كل نقطة حرفيًا
     current.push({x,y}); 
     redraw(); 
 }
-function end(){ if(!drawing) return; drawing=false; if(current.length) strokes.push(current); current=[]; redraw(); }
+function end(){ 
+    if(!drawing) return; 
+    drawing=false; 
+    if(current.length) strokes.push(current); 
+    current=[]; 
+    redraw(); 
+}
 
 board.addEventListener('mousedown', e=>{ const r=board.getBoundingClientRect(); start(e.clientX-r.left,e.clientY-r.top); });
 window.addEventListener('mousemove', e=>{ if(!drawing) return; const r=board.getBoundingClientRect(); move(e.clientX-r.left,e.clientY-r.top); });
@@ -89,13 +95,19 @@ function redraw(){
     for(const s of strokes) drawStroke(s);
     drawStroke(current);
 }
-function drawStroke(st){ if(!st || st.length<2) return; ctx.beginPath(); ctx.moveTo(st[0].x,st[0].y); for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x,st[i].y); ctx.stroke(); }
+function drawStroke(st){ 
+    if(!st || st.length<2) return; 
+    ctx.beginPath(); 
+    ctx.moveTo(st[0].x,st[0].y); 
+    for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x,st[i].y); 
+    ctx.stroke(); 
+}
 
 document.getElementById('clear').onclick = ()=>{ strokes=[]; current=[]; redraw(); };
 document.getElementById('undo').onclick = ()=>{ strokes.pop(); redraw(); };
 
-// ===== DST الذكي =====
-const MAX_STEP = 1; // زيادة خطوة قليلاً للرسم الحر
+// ===== DST الذكي 1:1 =====
+const MAX_STEP = 0.1; // دقة قصوى لكل خطوة (ملم)
 
 function splitStep(dx,dy){
     const steps=[]; let rx=dx, ry=dy;
@@ -104,14 +116,15 @@ function splitStep(dx,dy){
         const sy=Math.max(-MAX_STEP, Math.min(MAX_STEP, ry));
         steps.push([sx,sy]); rx-=sx; ry-=sy;
     }
-    steps.push([rx,ry]); return steps;
+    steps.push([rx,ry]); 
+    return steps;
 }
 
 function encodeStep(dx,dy,control){
     let b0=0,b1=0,b2=0;
     function applyAxis(v,axis){ 
         const sign=v<0?-1:1; 
-        let absv=Math.abs(v); 
+        let absv=Math.abs(Math.round(v)); 
         const W=[81,27,9,3,1]; 
         for(const w of W){ 
             if(absv>=w){ 
@@ -146,7 +159,7 @@ function buildDST(strokes){
         for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
     }
     bodyBytes.push(0x00,0x00,0xF3);
-    const header=new Uint8Array(512); header.fill(0x20); const name='JS_FINAL'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const header=new Uint8Array(512); header.fill(0x20); const name='JS_DST_1to1'; for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
     const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
@@ -154,7 +167,7 @@ document.getElementById('export-dst').onclick=()=>{
     if(strokes.length===0){ alert('ارسم شيئًا أولاً'); return; }
     const buf=buildDST(strokes); if(!buf){ alert('خطأ في إنشاء الملف'); return; }
     const blob=new Blob([buf],{type:'application/octet-stream'}); const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='design_final.dst'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='design_1to1.dst'; a.click();
     URL.revokeObjectURL(url);
 };
 
