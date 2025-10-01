@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>خريطة تطريز ذكية مع تصدير DST</title>
 <style>
-body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
+body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5; color:#111; }
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
 canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
@@ -15,17 +15,56 @@ button, input { padding:8px 12px; margin:5px; border-radius:12px; border:none; c
 button { background:#4b6cb7; color:#fff; font-weight:600; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
 button:hover { background:#182848;}
 input[type=file] { cursor:pointer; }
-.warn { color:#d00; font-size:0.85em; margin-left:15px;}
+.warn { color:#d00; font-size:0.85em; margin-left:15px; }
+
+/* قسم السيرة الذاتية */
+.devs { width:100%; background:transparent; display:flex; justify-content:center; gap:18px; padding:18px; box-sizing:border-box; flex-wrap:wrap; }
+.dev-card { background:#fff; border-radius:14px; box-shadow:0 6px 18px rgba(24,40,72,0.08); padding:16px; width:320px; border:1px solid #e6e9ef; }
+.dev-card h3 { margin:0 0 6px 0; font-size:1.1em; color:#182848; }
+.dev-card .role { font-size:0.95em; color:#4b6cb7; margin-bottom:8px; font-weight:600; }
+.dev-card ul { margin:8px 0 0 18px; padding:0; color:#333; font-size:0.95em; }
+.dev-card li { margin-bottom:6px; }
+
+/* ترويض النص بالعربية للعرض */
+.bio-title { text-align:center; margin-top:12px; font-weight:700; color:#182848; }
 </style>
 </head>
 <body>
-<header>خريطة تطريز ذكية مع تصدير DST</header>
+<header>mlfa2025.89</header>
+
 <div id="main"><canvas id="board"></canvas></div>
+
 <div class="controls">
     <button id="clear">مسح</button>
     <button id="export-dst">تصدير DST</button>
     <input type="file" id="upload" accept="image/*" title="رفع صورة وتحويلها لخريطة تطريز">
     <div class="warn">الصورة تتحول إلى مخطط تطريز مفهوم للماكينة.</div>
+</div>
+
+<!-- قسم السيرة الذاتية للمطورين -->
+<div class="bio-title">سير ذاتية — فريق التطوير</div>
+<div class="devs">
+    <div class="dev-card">
+        <h3>فارس</h3>
+        <div class="role">الموقع (Front-end / UX)</div>
+        <ul>
+            <li>مهندس واجهات أمامية بخبرة في HTML/CSS/JavaScript وCanvas.</li>
+            <li>تصميم واجهات مستخدم متجاوبة وسهلة الاستخدام لدعم الأجهزة المحمولة وسطح المكتب.</li>
+            <li>ساهم في بناء محرك الرسم، واجهة التحميل، وتجربة المستخدم للتصدير.</li>
+            <li>الاهتمامات: تحسين استجابة وأداء الواجهة وتجربة الاستخدام.</li>
+        </ul>
+    </div>
+
+    <div class="dev-card">
+        <h3>ملهم</h3>
+        <div class="role">الأداء (Performance / Algorithm)</div>
+        <ul>
+            <li>متخصص في خوارزميات المعالجة الصورية وتحويل الصور إلى مسارات قابلة للتطريز.</li>
+            <li>مسؤول عن implement دوال التحويل، تتبع المسارات، وترميز DST بكفاءة.</li>
+            <li>يعمل على تبسيط المسارات وتحسين حجم ومعدل الغرز لأداء الماكينة.</li>
+            <li>الاهتمامات: تحسين الأداء والذاكرة، ودقة تحويل الصور إلى خرائط غرز.</li>
+        </ul>
+    </div>
 </div>
 
 <script>
@@ -38,7 +77,8 @@ let PX_PER_MM=1;
 function resizeCanvas(){
     board.width=board.clientWidth;
     board.height=board.clientHeight;
-    PX_PER_MM=board.width/BOARD_MM;
+    // مقياس محسّن: نستخدم أصغر البعدين للحفاظ على النسبة
+    PX_PER_MM = Math.min(board.width, board.height) / BOARD_MM;
 }
 window.addEventListener('load',resizeCanvas);
 window.addEventListener('resize',resizeCanvas);
@@ -61,7 +101,7 @@ function encodeStep(dx,dy,control){
     let b0=0,b1=0,b2=0;
     function applyAxis(v,axis){
         const sign=v<0?-1:1;
-        let absv=Math.abs(v);
+        let absv=Math.abs(Math.round(v));
         const W=[81,27,9,3,1];
         for(const w of W){
             if(absv>=w){
@@ -107,9 +147,11 @@ function buildDST(strokes){
     }
     bodyBytes.push(0x00,0x00,0xF3);
     const header=new Uint8Array(512); header.fill(0x20);
-    let name=prompt('أدخل اسم التصميم (DST) بدون مسافات:','DESIGN1')||'JS_FINAL';
-    name=name.toUpperCase().substring(0,8);
+    let name = 'MLFA2025'; // اسم افتراضي بدون نافذة prompt
+    // نضع الاسم في أول 8 بايت من الهيدر
+    name = name.toUpperCase().substring(0,8);
     for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    // (اختصاري) يمكن إضافة حقول تكميلية هنا مثل أبعاد التصميم، وعدد الغرز، الخ.
     const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512); return buf.buffer;
 }
 
@@ -134,10 +176,10 @@ document.getElementById('upload').addEventListener('change',function(e){
         const imgData=tmpCtx.getImageData(0,0,tmpCanvas.width,tmpCanvas.height);
         const data=imgData.data; const width=tmpCanvas.width; const height=tmpCanvas.height;
 
-        // تحويل للصورة إلى أسود/أبيض
+        // تحويل للصورة إلى أسود/أبيض (عتبة بسيطة)
         for(let i=0;i<data.length;i+=4){ const gray=0.3*data[i]+0.59*data[i+1]+0.11*data[i+2]; const val=gray<128?0:255; data[i]=data[i+1]=data[i+2]=val; }
 
-        // إنشاء خريطة ماكينة ذكية
+        // إنشاء خريطة ماكينة ذكية (flood-fill tracing)
         strokes=[]; const visited=Array(width*height).fill(false);
         function getIndex(x,y){ return y*width+x; }
         function trace(x,y,stroke){
