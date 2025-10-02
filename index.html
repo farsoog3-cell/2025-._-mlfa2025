@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مخطط تطريز - 2D منضبط ومحسن</title>
+<title>mlfa.2026</title>
 <style>
 body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
 header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold;}
@@ -17,10 +17,11 @@ button:hover { background:#182848; }
 .upload-btn { background:#4b6cb7; color:white; font-weight:600; padding:8px 20px; border-radius:12px; cursor:pointer;}
 .upload-btn-wrapper input[type=file] { font-size:100px; position:absolute; left:0; top:0; opacity:0; cursor:pointer; }
 .warn { color:#d00; font-size:0.85em; margin-left:15px;}
+footer { text-align:center; padding:10px; font-size:0.9em; color:#555; }
 </style>
 </head>
 <body>
-<header>مخطط تطريز - 2D منضبط ومحسن</header>
+<header>mlfa.2026</header>
 
 <div id="main"><canvas id="board"></canvas></div>
 
@@ -33,6 +34,8 @@ button:hover { background:#182848; }
   </div>
   <div class="warn">كل الغرز باللون الأسود ودقة الحواف محفوظة.</div>
 </div>
+
+<footer>تصميم وصناعة وبرمجة: فارس وملهم - عمل مشترك</footer>
 
 <script>
 const board = document.getElementById('board');
@@ -48,7 +51,6 @@ function resizeCanvas() {
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
 
-// ===== تتبع الحواف بدقة عالية =====
 function traceContours(imgData, width, height) {
     const data = imgData.data;
     const visited = Array(width*height).fill(false);
@@ -67,7 +69,6 @@ function traceContours(imgData, width, height) {
             contour.push({x,y});
             [[1,0],[0,1],[-1,0],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([dx,dy])=>stack.push([x+dx,y+dy]));
         }
-        // تنظيف النقاط باستخدام Ramer–Douglas–Peucker
         function simplify(points, epsilon){
             if(points.length<3) return points;
             let dmax=0, index=0;
@@ -99,7 +100,6 @@ function traceContours(imgData, width, height) {
     return strokes;
 }
 
-// ===== تنعيم الخطوط مع الحفاظ على التفاصيل =====
 function smoothStroke(points){
     if(points.length<3) return points;
     const smoothed=[points[0]];
@@ -139,7 +139,6 @@ function animateStrokes(strokes, ctx){
     drawStep();
 }
 
-// ===== رفع الصورة =====
 document.getElementById('upload').addEventListener('change',(e)=>{
     const file=e.target.files[0]; if(!file) return;
     const img = new Image(); const reader = new FileReader();
@@ -167,10 +166,8 @@ document.getElementById('upload').addEventListener('change',(e)=>{
     }
 });
 
-// ===== مسح =====
 document.getElementById('clear').onclick=()=>{strokes=[];ctx.clearRect(0,0,board.width,board.height);};
 
-// ===== JSON منضبط =====
 function buildJSONStructured2D(strokes){
     if(strokes.length===0) return { colors:[[0,0,0]], stitches:[] };
     const result={ colors:[[0,0,0]], stitches:[] };
@@ -182,7 +179,6 @@ function buildJSONStructured2D(strokes){
     return result;
 }
 
-// ===== DST محسّن =====
 const MAX_STEP=1;
 function splitStep(dx,dy){ const steps=[]; let rx=dx,ry=dy; while(Math.abs(rx)>MAX_STEP||Math.abs(ry)>MAX_STEP){ const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx)); const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry)); steps.push([sx,sy]); rx-=sx; ry-=sy;} steps.push([rx,ry]); return steps;}
 function encodeStep(dx,dy,control){ let b0=0,b1=0,b2=0; function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);} else{ if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}} applyAxis(dx,'x'); applyAxis(dy,'y'); if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23; return [b0&0xFF,b1&0xFF,b2&0xFF];}
@@ -207,7 +203,6 @@ function buildDSTfromStructuredJSON(json){
     return buf.buffer;
 }
 
-// ===== تنزيل =====
 document.getElementById('export').onclick=()=>{
     if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
     const jsonData=buildJSONStructured2D(strokes);
