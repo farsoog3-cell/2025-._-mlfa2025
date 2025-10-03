@@ -27,7 +27,8 @@ footer { text-align:center; padding:10px; font-size:0.9em; color:#555; }
 
 <div class="controls">
   <button id="clear">مسح</button>
-  <button id="export">تنزيل JSON وDST</button>
+  <button id="exportDST">تحويل JSON إلى DST</button>
+  <button id="exportDSE">تحويل JSON إلى DSE</button>
   <div class="upload-btn-wrapper">
     <button class="upload-btn">📂 اختر صورة</button>
     <input type="file" id="upload" accept="image/*">
@@ -51,6 +52,9 @@ function resizeCanvas() {
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
 
+// -----------------------------------------
+// تحويل الصورة إلى غرز
+// -----------------------------------------
 function traceContours(imgData, width, height) {
     const data = imgData.data;
     const visited = Array(width*height).fill(false);
@@ -122,13 +126,11 @@ function animateStrokes(strokes, ctx){
     ctx.lineWidth=1;
     ctx.lineJoin='round';
     ctx.lineCap='round';
-
     const allPoints=[];
     for(const s of strokes){
         const smooth=smoothStroke(s);
         for(let i=1;i<smooth.length;i++) allPoints.push([smooth[i-1],smooth[i]]);
     }
-
     let index=0;
     function drawStep(){
         if(index>=allPoints.length) return;
@@ -139,6 +141,9 @@ function animateStrokes(strokes, ctx){
     drawStep();
 }
 
+// -----------------------------------------
+// رفع الصورة
+// -----------------------------------------
 document.getElementById('upload').addEventListener('change',(e)=>{
     const file=e.target.files[0]; if(!file) return;
     const img = new Image(); const reader = new FileReader();
@@ -166,8 +171,9 @@ document.getElementById('upload').addEventListener('change',(e)=>{
     }
 });
 
-document.getElementById('clear').onclick=()=>{strokes=[];ctx.clearRect(0,0,board.width,board.height);};
-
+// -----------------------------------------
+// بناء JSON من الغرز
+// -----------------------------------------
 function buildJSONStructured2D(strokes){
     if(strokes.length===0) return { colors:[[0,0,0]], stitches:[] };
     const result={ colors:[[0,0,0]], stitches:[] };
@@ -179,9 +185,14 @@ function buildJSONStructured2D(strokes){
     return result;
 }
 
+// -----------------------------------------
+// وظائف DST / DSE
+// -----------------------------------------
 const MAX_STEP=1;
 function splitStep(dx,dy){ const steps=[]; let rx=dx,ry=dy; while(Math.abs(rx)>MAX_STEP||Math.abs(ry)>MAX_STEP){ const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx)); const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry)); steps.push([sx,sy]); rx-=sx; ry-=sy;} steps.push([rx,ry]); return steps;}
 function encodeStep(dx,dy,control){ let b0=0,b1=0,b2=0; function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);} else{ if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}} applyAxis(dx,'x'); applyAxis(dy,'y'); if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23; return [b0&0xFF,b1&0xFF,b2&0xFF];}
+
+// بناء DST
 function buildDSTfromStructuredJSON(json){
     if(!json.stitches || json.stitches.length===0) return null;
     const allPoints=[...json.stitches.map(s=>({x:s.x,y:s.y})), null];
@@ -203,20 +214,62 @@ function buildDSTfromStructuredJSON(json){
     return buf.buffer;
 }
 
-document.getElementById('export').onclick=()=>{
-    if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
-    const jsonData=buildJSONStructured2D(strokes);
-    const jsonBlob=new Blob([JSON.stringify(jsonData,null,2)],{type:'application/json'});
-    const jsonUrl=URL.createObjectURL(jsonBlob);
-    const aJSON=document.createElement('a'); aJSON.href=jsonUrl; aJSON.download='stitches.json'; aJSON.click();
-    URL.revokeObjectURL(jsonUrl);
+// بناء DSE
+function buildDSEfromStructuredJSON(json){
+    if(!json.stitches || json.stitches.length===0) return null;
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    json.stitches.forEach(s=>{ if(s.x<minX) minX=s.x; if(s.x>maxX) maxX=s.x; if(s.y<minY) minY=s.y; if(s.y>maxY) maxY=s.y; });
+    const allPoints=[...json.stitches.map(s=>({x:s.x,y:s.y})), null];
+    let prev=allPoints[0]||{x:0,y:0};
+    const bodyBytes=[];
+    let first=false;
+    for(const pt of allPoints){
+        if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue;}
+        const curr=pt;
+        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,1)); prev=curr; first=true; continue;}
+        const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
+    }
+    bodyBytes.push(0x00,0x00,0xF3);
+    const header=new Uint8Array(512); header.fill(0x20);
+    function writeText(str, offset){ for(let i=0;i<str.length;i++) header[offset+i]=str.charCodeAt(i);}
+    writeText("LA:DSEFILE     ",0);
+    writeText("ST:"+json.stitches.length.toString().padEnd(7),20);
+    writeText("CO:1",40);
+    writeText("AX:"+Math.round(maxX).toString().padEnd(7),60);
+    writeText("AY:"+Math.round(maxY).toString().padEnd(7),80);
+    writeText("MX:"+Math.round(minX).toString().padEnd(7),100);
+    writeText("MY:"+Math.round(minY).toString().padEnd(7),120);
+    const buf = new Uint8Array(512 + bodyBytes.length);
+    buf.set(header,0);
+    buf.set(new Uint8Array(bodyBytes),512);
+    return buf.buffer;
+}
 
-    const dstBuffer=buildDSTfromStructuredJSON(jsonData);
-    if(!dstBuffer){ alert('خطأ في إنشاء ملف DST'); return; }
-    const dstBlob=new Blob([dstBuffer],{type:'application/octet-stream'});
-    const dstUrl=URL.createObjectURL(dstBlob);
-    const aDST=document.createElement('a'); aDST.href=dstUrl; aDST.download='design.dst'; aDST.click();
-    URL.revokeObjectURL(dstUrl);
+// -----------------------------------------
+// أزرار التحويل
+// -----------------------------------------
+document.getElementById('exportDST').onclick = () => {
+    if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
+    const jsonData = buildJSONStructured2D(strokes);
+    const dstBuffer = buildDSTfromStructuredJSON(jsonData);
+    if(dstBuffer){
+        const dstBlob = new Blob([dstBuffer], {type:'application/octet-stream'});
+        const dstUrl = URL.createObjectURL(dstBlob);
+        const aDST = document.createElement('a'); aDST.href = dstUrl; aDST.download='design.dst'; aDST.click();
+        URL.revokeObjectURL(dstUrl);
+    }
+};
+
+document.getElementById('exportDSE').onclick = () => {
+    if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
+    const jsonData = buildJSONStructured2D(strokes);
+    const dseBuffer = buildDSEfromStructuredJSON(jsonData);
+    if(dseBuffer){
+        const dseBlob = new Blob([dseBuffer],{type:'application/octet-stream'});
+        const dseUrl = URL.createObjectURL(dseBlob);
+        const aDSE = document.createElement('a'); aDSE.href=dseUrl; aDSE.download='design.dse'; aDSE.click();
+        URL.revokeObjectURL(dseUrl);
+    }
 };
 </script>
 </body>
