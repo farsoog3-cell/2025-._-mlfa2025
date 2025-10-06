@@ -5,18 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مخطط تطريز - 2D منضبط ومحسن</title>
 <style>
-body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
-header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold;}
+body, html {
+  margin:0; padding:0; height:100%; width:100%;
+  font-family:'Segoe UI',sans-serif;
+  display:flex; flex-direction:column;
+  background:#f9f6ff; /* خلفية بنفسجية فاتحة */
+}
+header {
+  background: linear-gradient(90deg,#7e57c2,#512da8); /* تدرج بنفسجي ناعم */
+  color:#fff; text-align:center;
+  padding:15px 0; font-size:1.4em; font-weight:bold;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
 #main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
-canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
+canvas {
+  display:block;
+  background:#ffffff;
+  border-radius:20px;
+  box-shadow:0 4px 10px rgba(126,87,194,0.2);
+  border:2px solid #d1c4e9; /* بنفسجي فاتح */
+}
 #board { width:80vmin; height:80vmin;}
-.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; flex-wrap:wrap;}
-button { padding:8px 12px; margin:5px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; background:#4b6cb7; color:#fff; font-weight:600;}
-button:hover { background:#182848; }
-.upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; }
-.upload-btn { background:#4b6cb7; color:white; font-weight:600; padding:8px 20px; border-radius:12px; cursor:pointer;}
-.upload-btn-wrapper input[type=file] { font-size:100px; position:absolute; left:0; top:0; opacity:0; cursor:pointer; }
-.warn { color:#d00; font-size:0.85em; margin-left:15px;}
+.controls {
+  flex:0 0 auto; padding:10px;
+  background:#ffffff;
+  display:flex; justify-content:center; align-items:center;
+  border-top:2px solid #e1bee7;
+  flex-wrap:wrap;
+}
+button {
+  padding:8px 12px; margin:5px;
+  border-radius:12px; border:none;
+  cursor:pointer; transition:0.3s;
+  background:#7e57c2; color:#fff; font-weight:600;
+  box-shadow:0 2px 4px rgba(126,87,194,0.3);
+}
+button:hover {
+  background:#512da8;
+  box-shadow:0 3px 6px rgba(81,45,168,0.4);
+}
+.upload-btn-wrapper {
+  position: relative; overflow: hidden; display: inline-block;
+}
+.upload-btn {
+  background:#7e57c2; color:white; font-weight:600;
+  padding:8px 20px; border-radius:12px; cursor:pointer;
+  box-shadow:0 2px 4px rgba(126,87,194,0.3);
+}
+.upload-btn:hover { background:#512da8; }
+.upload-btn-wrapper input[type=file] {
+  font-size:100px; position:absolute; left:0; top:0;
+  opacity:0; cursor:pointer;
+}
+.warn {
+  color:#6a1b9a; font-size:0.85em; margin-left:15px;
+  background:#ede7f6; padding:5px 10px; border-radius:10px;
+}
 </style>
 </head>
 <body>
@@ -48,7 +92,6 @@ function resizeCanvas() {
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
 
-// ===== تتبع الحواف بدقة عالية =====
 function traceContours(imgData, width, height) {
     const data = imgData.data;
     const visited = Array(width*height).fill(false);
@@ -98,7 +141,6 @@ function traceContours(imgData, width, height) {
     return strokes;
 }
 
-// ===== تنعيم الخطوط مع الحفاظ على التفاصيل =====
 function smoothStroke(points){
     if(points.length<3) return points;
     const smoothed=[points[0]];
@@ -138,7 +180,6 @@ function animateStrokes(strokes, ctx){
     drawStep();
 }
 
-// ===== رفع الصورة =====
 document.getElementById('upload').addEventListener('change',(e)=>{
     const file=e.target.files[0]; if(!file) return;
     const img = new Image(); const reader = new FileReader();
@@ -166,29 +207,23 @@ document.getElementById('upload').addEventListener('change',(e)=>{
     }
 });
 
-// ===== مسح =====
 document.getElementById('clear').onclick=()=>{strokes=[];ctx.clearRect(0,0,board.width,board.height);};
 
-// ===== JSON منضبط مع تكبير الرسم =====
 function buildJSONStructured2D(strokes){
     if(strokes.length===0) return { colors:[[0,0,0]], stitches:[] };
     const result={ colors:[[0,0,0]], stitches:[] };
 
-    // ===== هنا يمكنك تغيير حجم الرسم =====
-    const scaleX = 4; // تكبير العرض
-    const scaleY = 1;   // تكبير الطول
+    const scaleX = 4;
+    const scaleY = 1;
 
     strokes.forEach(stroke=>stroke.forEach(pt=>{
-        // ===== هنا العرض =====
         const x = Math.round(((pt.x - offsetX) / dw * imgWidth) * scaleX);
-        // ===== هنا الطول =====
         const y = Math.round(((pt.y - offsetY) / dh * imgHeight) * scaleY);
         result.stitches.push({ color_idx:0, x, y });
     }));
     return result;
 }
 
-// ===== DST محسّن =====
 const MAX_STEP=1;
 function splitStep(dx,dy){ const steps=[]; let rx=dx,ry=dy; while(Math.abs(rx)>MAX_STEP||Math.abs(ry)>MAX_STEP){ const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx)); const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry)); steps.push([sx,sy]); rx-=sx; ry-=sy;} steps.push([rx,ry]); return steps;}
 function encodeStep(dx,dy,control){ let b0=0,b1=0,b2=0; function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);} else{ if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}} applyAxis(dx,'x'); applyAxis(dy,'y'); if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23; return [b0&0xFF,b1&0xFF,b2&0xFF];}
@@ -213,7 +248,6 @@ function buildDSTfromStructuredJSON(json){
     return buf.buffer;
 }
 
-// ===== تنزيل =====
 document.getElementById('export').onclick=()=>{
     if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
     const jsonData=buildJSONStructured2D(strokes);
