@@ -1,60 +1,43 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>تسجيل الدخول بالمفتاح</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mlfa2025 - تسجيل الدخول</title>
 <style>
-  :root{--purple:#6b21a8;--purple-dark:#4b116f;--white:#fff;--muted:#7b6f95}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:"Segoe UI",Tajawal,system-ui;background:linear-gradient(180deg,#7b2ea1 0%, #9b5bdb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:#111}
-  .card{background:var(--white);padding:20px;border-radius:14px;max-width:480px;width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.18);text-align:center}
-  h1{margin:0 0 8px 0;color:var(--purple-dark)}
-  .small{color:#666;font-size:0.95rem}
-  input{width:100%;padding:12px;border-radius:10px;border:1px solid #eee;margin-top:12px;font-size:1rem}
-  button{margin-top:12px;background:var(--purple);color:var(--white);border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
-  .muted{color:var(--muted);margin-top:8px}
-  .danger{color:#d9534f;margin-top:10px}
-  .info{margin-top:12px;text-align:left;font-size:0.9rem;color:#555}
-  @media(max-width:520px){ .card{padding:16px} input{font-size:0.95rem} }
+:root{
+  --purple:#6b21a8;
+  --purple-dark:#4b116f;
+  --white:#ffffff;
+  --muted:#7b6f95;
+  --success:#2a9d8f;
+  --danger:#e54b6a;
+  --card-shadow:0 10px 30px rgba(107,33,168,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",Tajawal,system-ui;background:linear-gradient(180deg,var(--purple) 0%, #8b3bd9 100%);color:#111;height:100vh;display:flex;align-items:center;justify-content:center}
+.container{background:var(--white);border-radius:12px;padding:28px;max-width:420px;width:100%;box-shadow:var(--card-shadow);text-align:center}
+h1{margin-bottom:20px;color:var(--purple-dark)}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid #eee;margin:8px 0;font-size:1rem}
+button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--purple);color:var(--white);font-weight:600;cursor:pointer;transition:0.3s;font-size:1rem}
+button:hover{background:var(--purple-dark)}
+.message{margin-top:12px;font-size:0.95rem}
+.success{color:var(--success)}
+.error{color:var(--danger)}
 </style>
 </head>
 <body>
 
-  <div class="card">
-    <h1>دخول بالمفتاح</h1>
-    <div class="small muted">أدخل مفتاح الاشتراك لبدء الجلسة على هذا الجهاز</div>
-
-    <input id="keyInput" placeholder="أدخل المفتاح هنا" />
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button id="loginBtn">دخول</button>
-      <button id="clearBtn" class="ghost" style="background:transparent;border:1px solid #eee;color:var(--purple-dark)">مسح</button>
-    </div>
-
-    <div id="status" class="info"></div>
-    <div id="error" class="danger"></div>
-    <div style="margin-top:14px" class="small muted">كل مفتاح يسمح بجهاز واحد فقط. لتغيير الجهاز، يجب الحرص من لوحة الإدارة أو حذف الجلسة.</div>
-  </div>
+<div class="container">
+  <h1>mlfa2025</h1>
+  <input type="text" id="userKey" placeholder="أدخل مفتاح الاشتراك">
+  <button id="loginBtn">دخول</button>
+  <div id="msg" class="message"></div>
+</div>
 
 <script type="module">
-// ---------- Device ID ----------
-function getDeviceId(){
-  let id = localStorage.getItem('deviceId_v1');
-  if(!id){
-    // استخدم crypto.randomUUID إن توفر
-    if(window.crypto && crypto.randomUUID) id = crypto.randomUUID();
-    else id = 'd_' + Math.random().toString(36).slice(2,12) + Date.now().toString(36);
-    localStorage.setItem('deviceId_v1', id);
-  }
-  return id;
-}
-const deviceId = getDeviceId();
-
-// ---------- Firebase ----------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-import {
-  getDatabase, ref, set, get, child, remove
-} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+import { getDatabase, ref, get, child, set } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD0Hh1e5lq4yfKO9iIPStC6wFfUgXH-6ps",
@@ -72,61 +55,39 @@ const db = getDatabase(app);
 const KEYS_PATH = 'keys';
 const SESSIONS_PATH = 'sessions';
 
-// ---------- DOM ----------
-const keyInput = document.getElementById('keyInput');
+const userKeyInput = document.getElementById('userKey');
 const loginBtn = document.getElementById('loginBtn');
-const clearBtn = document.getElementById('clearBtn');
-const statusDiv = document.getElementById('status');
-const errorDiv = document.getElementById('error');
+const msgDiv = document.getElementById('msg');
 
-function setStatus(msg){ statusDiv.textContent = msg; errorDiv.textContent = ''; }
-function setError(msg){ errorDiv.textContent = msg; statusDiv.textContent = ''; }
+loginBtn.addEventListener('click', async () => {
+  const key = (userKeyInput.value||'').trim();
+  if(!key){ msgDiv.textContent='المفتاح فارغ'; msgDiv.className='message error'; return; }
 
-// ---------- login ----------
-loginBtn.addEventListener('click', async ()=>{
-  const key = (keyInput.value||'').trim();
-  if(!key){ setError('أدخل المفتاح أولاً'); return; }
   try{
-    setStatus('التحقق من المفتاح ...');
-    const ksnap = await get(child(ref(db), `${KEYS_PATH}/${key}`));
-    if(!ksnap.exists()){ setError('المفتاح غير موجود'); return; }
-    const keyObj = ksnap.val();
+    const snap = await get(child(ref(db),`${KEYS_PATH}/${key}`));
+    if(!snap.exists()){ msgDiv.textContent='المفتاح غير صحيح'; msgDiv.className='message error'; return; }
+
+    const data = snap.val();
     const now = Date.now();
-    if(keyObj.expiresAt && keyObj.expiresAt <= now){ setError('انتهت صلاحية هذا المفتاح'); return; }
+    if(data.expiresAt && data.expiresAt<=now){ msgDiv.textContent='المفتاح منتهي'; msgDiv.className='message error'; return; }
 
-    // افحص ما إذا توجد جلسة مسجلة مسبقًا لهذا المفتاح
-    const ssnap = await get(child(ref(db), `${SESSIONS_PATH}/${key}`));
-    if(!ssnap.exists()){
-      // غير مستخدم => أنشئ session مسجل بالجهاز الحالي
-      await set(ref(db, `${SESSIONS_PATH}/${key}`), { deviceId, createdAt: now });
-      setStatus('تم تسجيل الجهاز ونجحت عملية الدخول. جاري التحويل...');
-      // هنا تحول المستخدم لصفحة التطبيق (مثال)
-      setTimeout(()=>{ window.location.href = 'drawing.html'; }, 900);
-      return;
+    const sessionSnap = await get(child(ref(db),`${SESSIONS_PATH}/${key}`));
+    if(sessionSnap.exists() && sessionSnap.val().deviceId !== null){ 
+      msgDiv.textContent='هذا المفتاح مستخدم على جهاز آخر'; 
+      msgDiv.className='message error'; 
+      return; 
     }
-    const session = ssnap.val();
-    if(session.deviceId === deviceId){
-      setStatus('هذا الجهاز مرتبط بالمفتاح مسبقًا. جاري التحويل...');
-      setTimeout(()=>{ window.location.href = 'drawing.html'; }, 700);
-      return;
-    }
-    // مرتبط بجهاز آخر => لا تسمح
-    setError('هذا المفتاح مرتبط بجهاز آخر، لا يمكن الدخول من هذا الجهاز.');
-  }catch(err){
-    console.error(err);
-    setError('خطأ في الاتصال. حاول لاحقًا.');
-  }
+
+    const deviceId = crypto.randomUUID();
+    await set(ref(db,`${SESSIONS_PATH}/${key}`),{deviceId, loginAt:now});
+    sessionStorage.setItem('mlfa2025_userKey',key);
+    sessionStorage.setItem('mlfa2025_deviceId',deviceId);
+
+    msgDiv.textContent='تم تسجيل الدخول بنجاح'; msgDiv.className='message success';
+    setTimeout(()=>{ location.href='user-dashboard.html'; },1000);
+  }catch(err){ console.error(err); msgDiv.textContent='فشل تسجيل الدخول'; msgDiv.className='message error'; }
 });
-
-// مسح الإدخال
-clearBtn.addEventListener('click', ()=>{ keyInput.value = ''; statusDiv.textContent=''; errorDiv.textContent=''; });
-
-// ---------- إضافة زر للمستخدم لمسح جلسته (اختياري) ----------
-/* ملاحظة:
-   إن أردت تمكين المستخدم من فك ارتباط المفتاح بالجهاز (مثلاً إذا فقد الجهاز السابق)
-   فإن ذلك يجب أن يتم بحذر — قد يتطلب تدخل Admin لحذف جلسة المفتاح من لوحة Admin.
-   إذا أردت، أضيف زر "فك الربط" يطلب تأكيدًا ويحذف sessions/{key} من DB.
-*/
 </script>
+
 </body>
 </html>
