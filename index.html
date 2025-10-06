@@ -83,8 +83,10 @@ loginBtn.addEventListener('click', async () => {
     sessionStorage.setItem('mlfa2025_userKey',key);
     sessionStorage.setItem('mlfa2025_deviceId',deviceId);
 
-    msgDiv.textContent='تم تسجيل الدخول بنجاح'; msgDiv.className='message success';
-    setTimeout(()=>{ location.href='user-dashboard.html'; },1000);
+    msgDiv.textContent='تم تسجيل الدخول بنجاح'; 
+    msgDiv.className='message success';
+    
+    setTimeout(()=>{ location.href='drawing.html'; },1000); // توجيه إلى drawing.html
   }catch(err){ console.error(err); msgDiv.textContent='فشل تسجيل الدخول'; msgDiv.className='message error'; }
 });
 </script>
