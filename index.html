@@ -61,21 +61,22 @@ const msgDiv = document.getElementById('msg');
 
 loginBtn.addEventListener('click', async () => {
   const key = (userKeyInput.value||'').trim();
-  if(!key){ msgDiv.textContent='المفتاح فارغ'; msgDiv.className='message error'; return; }
+  if(!key){ showMsg('يرجى إدخال المفتاح', true); return; }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'جارٍ التحقق...';
 
   try{
     const snap = await get(child(ref(db),`${KEYS_PATH}/${key}`));
-    if(!snap.exists()){ msgDiv.textContent='المفتاح غير صحيح'; msgDiv.className='message error'; return; }
+    if(!snap.exists()){ showMsg('المفتاح غير صحيح', true); resetBtn(); return; }
 
     const data = snap.val();
     const now = Date.now();
-    if(data.expiresAt && data.expiresAt<=now){ msgDiv.textContent='المفتاح منتهي'; msgDiv.className='message error'; return; }
+    if(data.expiresAt && data.expiresAt<=now){ showMsg('المفتاح منتهي', true); resetBtn(); return; }
 
     const sessionSnap = await get(child(ref(db),`${SESSIONS_PATH}/${key}`));
-    if(sessionSnap.exists() && sessionSnap.val().deviceId !== null){ 
-      msgDiv.textContent='هذا المفتاح مستخدم على جهاز آخر'; 
-      msgDiv.className='message error'; 
-      return; 
+    if(sessionSnap.exists() && sessionSnap.val().deviceId){ 
+      showMsg('المفتاح مستخدم على جهاز آخر', true); resetBtn(); return; 
     }
 
     const deviceId = crypto.randomUUID();
@@ -83,12 +84,26 @@ loginBtn.addEventListener('click', async () => {
     sessionStorage.setItem('mlfa2025_userKey',key);
     sessionStorage.setItem('mlfa2025_deviceId',deviceId);
 
-    msgDiv.textContent='تم تسجيل الدخول بنجاح'; 
-    msgDiv.className='message success';
-    
-    setTimeout(()=>{ location.href='drawing.html'; },1000); // توجيه إلى drawing.html
-  }catch(err){ console.error(err); msgDiv.textContent='فشل تسجيل الدخول'; msgDiv.className='message error'; }
+    showMsg('تم تسجيل الدخول بنجاح', false);
+    setTimeout(()=>{ location.href='drawing.html'; },800);
+
+  }catch(err){
+    console.error(err);
+    showMsg('حدث خطأ أثناء تسجيل الدخول', true);
+  }finally{
+    resetBtn();
+  }
 });
+
+function showMsg(text, isError=false){
+  msgDiv.textContent = text;
+  msgDiv.classList.remove('error','success');
+  msgDiv.classList.add(isError ? 'error' : 'success');
+}
+function resetBtn(){
+  loginBtn.disabled = false;
+  loginBtn.textContent = 'دخول';
+}
 </script>
 
 </body>
