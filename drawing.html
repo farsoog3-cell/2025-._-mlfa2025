@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مخطط تطريز - 2D منضبط ومحسن</title>
+<style>
+body, html { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; background:#f0f2f5;}
+header { background: linear-gradient(90deg,#4b6cb7,#182848); color:#fff; text-align:center; padding:15px 0; font-size:1.4em; font-weight:bold;}
+#main { flex:1 1 auto; display:flex; justify-content:center; align-items:center; padding:20px;}
+canvas { display:block; background:#fff; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); border:2px solid #ccc;}
+#board { width:80vmin; height:80vmin;}
+.controls { flex:0 0 auto; padding:10px; background:#fff; display:flex; justify-content:center; align-items:center; border-top:2px solid #ddd; flex-wrap:wrap;}
+button { padding:8px 12px; margin:5px; border-radius:12px; border:none; cursor:pointer; transition:0.3s; background:#4b6cb7; color:#fff; font-weight:600;}
+button:hover { background:#182848; }
+.upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; }
+.upload-btn { background:#4b6cb7; color:white; font-weight:600; padding:8px 20px; border-radius:12px; cursor:pointer;}
+.upload-btn-wrapper input[type=file] { font-size:100px; position:absolute; left:0; top:0; opacity:0; cursor:pointer; }
+.warn { color:#d00; font-size:0.85em; margin-left:15px;}
+</style>
+</head>
+<body>
+<header>مخطط تطريز - 2D منضبط ومحسن</header>
+
+<div id="main"><canvas id="board"></canvas></div>
+
+<div class="controls">
+  <button id="clear">مسح</button>
+  <button id="export">تنزيل JSON وDST</button>
+  <div class="upload-btn-wrapper">
+    <button class="upload-btn">📂 اختر صورة</button>
+    <input type="file" id="upload" accept="image/*">
+  </div>
+  <div class="warn">كل الغرز باللون الأسود ودقة الحواف محفوظة.</div>
+</div>
+
+<script>
+const board = document.getElementById('board');
+const ctx = board.getContext('2d');
+let strokes = [];
+let imgWidth = 0, imgHeight = 0;
+let dw = 0, dh = 0, offsetX = 0, offsetY = 0;
+
+function resizeCanvas() {
+    board.width = board.clientWidth;
+    board.height = board.clientHeight;
+}
+window.addEventListener('load', resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
+
+// ===== تتبع الحواف بدقة عالية =====
+function traceContours(imgData, width, height) {
+    const data = imgData.data;
+    const visited = Array(width*height).fill(false);
+    const strokes = [];
+    function getIndex(x,y){ return y*width+x; }
+    function isBlack(x,y){ return data[4*getIndex(x,y)]<50; }
+
+    function followContour(x0,y0){
+        const contour=[];
+        const stack=[[x0,y0]];
+        while(stack.length>0){
+            const [x,y] = stack.pop();
+            if(x<0||y<0||x>=width||y>=height) continue;
+            if(visited[getIndex(x,y)]||!isBlack(x,y)) continue;
+            visited[getIndex(x,y)] = true;
+            contour.push({x,y});
+            [[1,0],[0,1],[-1,0],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([dx,dy])=>stack.push([x+dx,y+dy]));
+        }
+        function simplify(points, epsilon){
+            if(points.length<3) return points;
+            let dmax=0, index=0;
+            const end=points.length-1;
+            for(let i=1;i<end;i++){
+                const dx=points[end].x-points[0].x;
+                const dy=points[end].y-points[0].y;
+                const mag=Math.sqrt(dx*dx+dy*dy);
+                const distance=Math.abs(dy*points[i].x - dx*points[i].y + points[end].x*points[0].y - points[end].y*points[0].x)/mag;
+                if(distance>dmax){ dmax=distance; index=i; }
+            }
+            if(dmax>epsilon){
+                const rec1=simplify(points.slice(0,index+1),epsilon);
+                const rec2=simplify(points.slice(index),epsilon);
+                return rec1.slice(0,-1).concat(rec2);
+            } return [ ...points ];
+        }
+        return contour.length>4 ? simplify(contour,1) : null;
+    }
+
+    for(let y=0;y<height;y++){
+        for(let x=0;x<width;x++){
+            if(!visited[getIndex(x,y)] && isBlack(x,y)){
+                const stroke = followContour(x,y);
+                if(stroke) strokes.push(stroke);
+            }
+        }
+    }
+    return strokes;
+}
+
+// ===== تنعيم الخطوط مع الحفاظ على التفاصيل =====
+function smoothStroke(points){
+    if(points.length<3) return points;
+    const smoothed=[points[0]];
+    for(let i=1;i<points.length-2;i++){
+        const p0=points[i-1],p1=points[i],p2=points[i+1],p3=points[i+2];
+        for(let t=0;t<=1;t+=0.15){
+            const tt=t*t,ttt=tt*t;
+            const x=0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*tt+(-p0.x+3*p1.x-3*p2.x+p3.x)*ttt);
+            const y=0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*tt+(-p0.y+3*p1.y-3*p2.y+p3.y)*ttt);
+            smoothed.push({x,y});
+        }
+    }
+    smoothed.push(points[points.length-1]);
+    return smoothed;
+}
+
+function animateStrokes(strokes, ctx){
+    ctx.clearRect(0,0,board.width,board.height);
+    ctx.strokeStyle='black';
+    ctx.lineWidth=1;
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+
+    const allPoints=[];
+    for(const s of strokes){
+        const smooth=smoothStroke(s);
+        for(let i=1;i<smooth.length;i++) allPoints.push([smooth[i-1],smooth[i]]);
+    }
+
+    let index=0;
+    function drawStep(){
+        if(index>=allPoints.length) return;
+        const [p1,p2]=allPoints[index];
+        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); index++;
+        requestAnimationFrame(drawStep);
+    }
+    drawStep();
+}
+
+// ===== رفع الصورة =====
+document.getElementById('upload').addEventListener('change',(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const img = new Image(); const reader = new FileReader();
+    reader.onload=function(ev){ img.src=ev.target.result; }
+    reader.readAsDataURL(file);
+    img.onload=function(){
+        imgWidth=img.width; imgHeight=img.height;
+        const tmpCanvas=document.createElement('canvas');
+        const tmpCtx=tmpCanvas.getContext('2d');
+        tmpCanvas.width=board.width; tmpCanvas.height=board.height;
+        const aspect=img.width/img.height;
+        dw=tmpCanvas.width; dh=tmpCanvas.height;
+        if(aspect>1){ dh=dw/aspect; } else { dw=dh*aspect; }
+        offsetX=(tmpCanvas.width-dw)/2; offsetY=(tmpCanvas.height-dh)/2;
+        tmpCtx.fillStyle='white'; tmpCtx.fillRect(0,0,tmpCanvas.width,tmpCanvas.height);
+        tmpCtx.drawImage(img,offsetX,offsetY,dw,dh);
+        const imgData=tmpCtx.getImageData(0,0,tmpCanvas.width,tmpCanvas.height);
+        for(let i=0;i<imgData.data.length;i+=4){
+            const gray=0.3*imgData.data[i]+0.59*imgData.data[i+1]+0.11*imgData.data[i+2];
+            const val=gray<128?0:255;
+            imgData.data[i]=imgData.data[i+1]=imgData.data[i+2]=val;
+        }
+        strokes=traceContours(imgData,tmpCanvas.width,tmpCanvas.height);
+        animateStrokes(strokes,ctx);
+    }
+});
+
+// ===== مسح =====
+document.getElementById('clear').onclick=()=>{strokes=[];ctx.clearRect(0,0,board.width,board.height);};
+
+// ===== JSON منضبط مع تكبير الرسم =====
+function buildJSONStructured2D(strokes){
+    if(strokes.length===0) return { colors:[[0,0,0]], stitches:[] };
+    const result={ colors:[[0,0,0]], stitches:[] };
+
+    // ===== هنا يمكنك تغيير حجم الرسم =====
+    const scaleX = 4; // تكبير العرض
+    const scaleY = 1;   // تكبير الطول
+
+    strokes.forEach(stroke=>stroke.forEach(pt=>{
+        // ===== هنا العرض =====
+        const x = Math.round(((pt.x - offsetX) / dw * imgWidth) * scaleX);
+        // ===== هنا الطول =====
+        const y = Math.round(((pt.y - offsetY) / dh * imgHeight) * scaleY);
+        result.stitches.push({ color_idx:0, x, y });
+    }));
+    return result;
+}
+
+// ===== DST محسّن =====
+const MAX_STEP=1;
+function splitStep(dx,dy){ const steps=[]; let rx=dx,ry=dy; while(Math.abs(rx)>MAX_STEP||Math.abs(ry)>MAX_STEP){ const sx=Math.max(-MAX_STEP,Math.min(MAX_STEP,rx)); const sy=Math.max(-MAX_STEP,Math.min(MAX_STEP,ry)); steps.push([sx,sy]); rx-=sx; ry-=sy;} steps.push([rx,ry]); return steps;}
+function encodeStep(dx,dy,control){ let b0=0,b1=0,b2=0; function applyAxis(v,axis){ const sign=v<0?-1:1; let absv=Math.abs(v); const W=[81,27,9,3,1]; for(const w of W){ if(absv>=w){ if(axis==='x'){ if(w===1)b0|=(sign>0?0x01:0x02); else if(w===9)b0|=(sign>0?0x04:0x08); else if(w===3)b1|=(sign>0?0x01:0x02); else if(w===27)b1|=(sign>0?0x04:0x08); else if(w===81)b2|=(sign>0?0x20:0x40);} else{ if(w===1)b0|=(sign>0?0x10:0x20); else if(w===9)b0|=(sign>0?0x40:0x80); else if(w===3)b1|=(sign>0?0x10:0x20); else if(w===27)b1|=(sign>0?0x40:0x80); else if(w===81)b2|=(sign>0?0x04:0x08);} absv-=w;}}} applyAxis(dx,'x'); applyAxis(dy,'y'); if(control===0)b2|=0x03; else if(control===1)b2|=0x83; else if(control===2)b2|=0x23; return [b0&0xFF,b1&0xFF,b2&0xFF];}
+function buildDSTfromStructuredJSON(json){
+    if(!json.stitches || json.stitches.length===0) return null;
+    const allPoints=[...json.stitches.map(s=>({x:s.x,y:s.y})), null];
+    let prev=allPoints[0]||{x:0,y:0};
+    const bodyBytes=[];
+    let first=false;
+    for(const pt of allPoints){
+        if(pt===null){ bodyBytes.push(...encodeStep(0,0,2)); first=false; continue;}
+        const curr=pt;
+        if(!first){ const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,1)); prev=curr; first=true; continue;}
+        const dx=curr.x-prev.x; const dy=curr.y-prev.y; for(const [sx,sy] of splitStep(dx,dy)) bodyBytes.push(...encodeStep(sx,sy,0)); prev=curr;
+    }
+    bodyBytes.push(0x00,0x00,0xF3);
+    const header=new Uint8Array(512); header.fill(0x20);
+    let name=prompt('أدخل اسم التصميم (DST) بدون مسافات:','DESIGN1')||'DST_FINAL';
+    name=name.toUpperCase().substring(0,8);
+    for(let i=0;i<name.length;i++) header[i]=name.charCodeAt(i);
+    const buf=new Uint8Array(512+bodyBytes.length); buf.set(header,0); buf.set(new Uint8Array(bodyBytes),512);
+    return buf.buffer;
+}
+
+// ===== تنزيل =====
+document.getElementById('export').onclick=()=>{
+    if(strokes.length===0){ alert('ارفع صورة أو ارسم شيئًا أولاً'); return; }
+    const jsonData=buildJSONStructured2D(strokes);
+    const jsonBlob=new Blob([JSON.stringify(jsonData,null,2)],{type:'application/json'});
+    const jsonUrl=URL.createObjectURL(jsonBlob);
+    const aJSON=document.createElement('a'); aJSON.href=jsonUrl; aJSON.download='stitches.json'; aJSON.click();
+    URL.revokeObjectURL(jsonUrl);
+
+    const dstBuffer=buildDSTfromStructuredJSON(jsonData);
+    if(!dstBuffer){ alert('خطأ في إنشاء ملف DST'); return; }
+    const dstBlob=new Blob([dstBuffer],{type:'application/octet-stream'});
+    const dstUrl=URL.createObjectURL(dstBlob);
+    const aDST=document.createElement('a'); aDST.href=dstUrl; aDST.download='design.dst'; aDST.click();
+    URL.revokeObjectURL(dstUrl);
+};
+</script>
+</body>
+</html>
